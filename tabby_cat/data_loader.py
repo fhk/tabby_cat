@@ -6,7 +6,9 @@ import zipfile
 
 import requests
 from bs4 import BeautifulSoup
-import geopandas
+import geopandas as gpd
+import pandas as pd
+from shapely.geometry import Point
 
 class DataLoader():
     """
@@ -73,6 +75,8 @@ class DataLoader():
     # need to get this page and then go through each states cities
     openaddress = "http://results.openaddresses.io/?runs=all#runs"
     where = []
+    add_files = []
+    data_cols = ['OA:x', 'OA:y']
 
     streets_df = None
     address_df = None
@@ -98,31 +102,45 @@ class DataLoader():
         return region
 
     def download_data_openaddress(self, region):
-        if not os.path.exists(f".{region}/{self.known_regions[region]}.csv"):
-            page = requests.get(self.openaddress)
-            soup = BeautifulSoup(page.content, 'html.parser')
-            links = soup.find_all('a', href=True)
-            for l in  links:
-                if l.text[:5] == f"us/{self.known_regions[region]}":
-                    link = l.attrs.get("href")
-                    if link[-3:] == "csv":
-                        data = requests.get(link, stream=True)
-                        with open(f"./{region}/{self.known_regions[region]}.csv", "ab") as output:
+
+        page = requests.get(self.openaddress)
+        soup = BeautifulSoup(page.content, 'html.parser')
+        links = soup.find_all('a', href=True)
+        files = 0
+        for l in links:
+            if l.text[:5] == f"us/{self.known_regions[region]}":
+                link = l.attrs.get("href")
+                if link[-3:] == "csv":
+                    data = requests.get(link, stream=True)
+                    full_file_name = f"./{region}/{self.known_regions[region]}_{files}.csv"
+                    self.add_files.append(full_file_name)
+                    if not os.path.exists(full_file_name):
+                        with open(full_file_name, "wb") as output:
                             for chunk in data.iter_content(chunk_size=128):
                                 output.write(chunk)
+                    files += 1
 
     def read_csv(self, file_name):
-        pass
+        return pd.read_csv(file_name, usecols=self.data_cols)
 
     def read_shp(self, file_name):
-        return geopandas.read_file(file_name)
+        return gpd.read_file(file_name)
 
     def read_street_data(self, region):
         self.streets_df = self.read_shp(f"./{region}/{self.street_file_name}")
 
     def read_address_data(self, region):
-        for add_file in self.add_files:
-            self.address_df.concat(self.read_csv(f"./{region}/{self.add_file}"))
+        for file_name in self.add_files:
+            df = self.read_csv(file_name)
+            gdf = gpd.GeoDataFrame(
+                df.drop(['OA:x', 'OA:y'], axis=1),
+                    crs={'init': 'epsg:4326'},
+                    geometry=[Point(xy) for xy in zip(df['OA:x'], df['OA:y'])])
+            if self.address_df is None:
+                self.address_df = gdf
+            else:
+                self.address_df = self.address_df.append(gdf, ignore_index=True)
+            
 
 
 def main():
@@ -131,6 +149,9 @@ def main():
     dl.download_data_geofabrik(where)
     dl.read_street_data(where)
     dl.download_data_openaddress(where)
+    dl.read_address_data(where)
+
+    import pdb; pdb.set_trace()
 
 
 
