@@ -1,7 +1,7 @@
 
 # Tabby Cat
 
-Part of the [broadband.cat](broadband.cat) open source broadband modellin suite.
+Part of the [broadband.cat](http://broadband.cat) open source broadband modellin suite.
 
 
 ## DataLoader
