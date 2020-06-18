@@ -90,7 +90,6 @@ class DataLoader():
                 for cal in californias:
                     download_data_geofabrik(cal)
             full_url = f"{self.geofabrik_url}{region.lower()}{self.geofabrik_ending_url_string}"
-            import pdb; pdb.set_trace()
             page = requests.get(full_url, stream=True)
             with open(f"{region}.zip", "wb") as fd:
                 for chunk in page.iter_content(chunk_size=128):
