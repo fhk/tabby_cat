@@ -126,7 +126,13 @@ class DataLoader():
         return gpd.read_file(file_name)
 
     def read_street_data(self, region):
-        self.streets_df = self.read_shp(f"./{region}/{self.street_file_name}")
+        streets = self.read_shp(f"./{region}/{self.street_file_name}")
+        self.streets_df = streets[streets['fclass'].isin([
+            "residential",
+            "primary",
+            "secondary",
+            "tertiary",
+            "service"])]
 
     def read_address_data(self, region):
         for file_name in self.add_files:

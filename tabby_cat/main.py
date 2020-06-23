@@ -13,6 +13,7 @@ def main():
     dl.read_street_data(where)
     dl.download_data_openaddress(where)
     dl.read_address_data(where)
+    #dl.address_df.to_file("address.shp")
 
     pr = Processor()
     pr.snap_points_to_line(dl.streets_df, dl.address_df)
