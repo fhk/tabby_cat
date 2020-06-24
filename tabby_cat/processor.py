@@ -9,7 +9,9 @@ from shapely.geometry import LineString, MultiPoint
 
 class Processor():
     def __init__(self):
-        pass
+        self.snap_lines = None
+        self.all_lines = None
+        self.cut_lines = None
 
     def points_to_multipoint(self, data):
         coords = set()
@@ -24,6 +26,7 @@ class Processor():
         """
         # this creates and also provides us access to the spatial index
         lines = lines.to_crs('epsg:3857')
+        self.lines = lines
         points = points.to_crs('epsg:3857')
         offset = 500
         bbox = points.bounds + [-offset, -offset, offset, offset]
@@ -58,23 +61,33 @@ class Processor():
         series = gpd.GeoSeries(closest.point)
         series.crs = {'init': 'epsg:3857'}
         pos = closest.geometry.project(series)
-        pos.crs = {'init': 'epsg:3857'}
         # Get new point location geometry
         new_pts = closest.geometry.interpolate(pos)
         #Identify the columns we want to copy from the closest line to the point, such as a line ID.
         line_columns = ['line_i', 'osm_id', 'code', 'fclass']
         # Create a new GeoDataFrame from the columns from the closest line and new point geometries (which will be called "geometries")
         snapped = gpd.GeoDataFrame(
-            closest[line_columns],geometry=new_pts)
+            closest[line_columns],geometry=new_pts, crs="epsg:3857")
         closest['snapped'] = snapped.geometry
-        split_df = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
-        test = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
-        df = pd.DataFrame({"geom": test})
-        gdf = gpd.GeoDataFrame(df, geometry="geom")
-        gdf.crs = {'init': 'epsg:3857'}
+        split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
+        split_lines_df = pd.DataFrame({"geom": split_lines})
+        self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
+        snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
+        snap_df = pd.DataFrame({"geom": snap_lines})
+        snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
+        self.snap_lines = snap_gdf
         # gdf.to_crs("epsg:4326").to_file("test_lines.shp")
         # Join back to the original points:
-        updated_points = points.drop(columns=["geometry"]).join(snapped)
+        # updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
-        updated_points = updated_points.dropna(subset=["geometry"]).to_crs('epsg:4326')
+        # updated_points = updated_points.dropna(subset=["geometry"]).to_crs('epsg:4326')
         #updated_points.to_file("updated.shp")
+
+    def geom_to_graph(self):
+        self.lines["start"] = self.lines.geometry.apply(lambda x: x.coords[0])
+        self.lines["end"] = self.lines.geometry.apply(lambda x: x.coords[-1])
+        self.cut_lines["start"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[0] for geom in x] if x.geom_type == "MultiLineString" else x.coords[0])
+        self.cut_lines["end"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[-1] for geom in x] if x.geom_type == "MultiLineString" else x.coords[-1])
+
+    def graph_to_geom(self):
+        pass

@@ -17,6 +17,7 @@ def main():
 
     pr = Processor()
     pr.snap_points_to_line(dl.streets_df, dl.address_df)
+    pr.geom_to_graph()
 
     import pdb; pdb.set_trace()
 

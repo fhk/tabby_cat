@@ -132,6 +132,11 @@ class DataLoader():
             "primary",
             "secondary",
             "tertiary",
+            "service",
+            "unclassified",
+            "trunk",
+            "motorway",
+            "motorway_link",
             "service"])]
 
     def read_address_data(self, region):
