@@ -7,7 +7,7 @@ from tabby_cat.processor import Processor
 
 
 def main():
-    where = "Alaska"
+    where = "Ohio"
     dl = DataLoader()
     dl.download_data_geofabrik(where)
     dl.read_street_data(where)
@@ -17,9 +17,7 @@ def main():
 
     pr = Processor()
     pr.snap_points_to_line(dl.streets_df, dl.address_df)
-    pr.geom_to_graph()
-
-    import pdb; pdb.set_trace()
+    #   pr.geom_to_graph()
 
 
 if __name__ == "__main__":

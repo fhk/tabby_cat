@@ -4,6 +4,7 @@ Run the DataLoader dataframes through processing
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+import multiprocessing as mp
 from shapely.ops import split
 from shapely.geometry import LineString, MultiPoint
 
@@ -12,6 +13,57 @@ class Processor():
         self.snap_lines = None
         self.all_lines = None
         self.cut_lines = None
+
+    def _parallelize(self, points, lines):
+        """
+        Concept taken from here: https://swanlund.space/parallelizing-python
+        """
+        cpus = mp.cpu_count()
+        
+        intersection_chunks = np.array_split(points, cpus)
+        
+        pool = mp.Pool(processes=cpus)
+        
+        chunk_processes = [pool.apply_async(self._snap_part, args=(chunk, lines)) for chunk in intersection_chunks]
+
+        intersection_results = [chunk.get() for chunk in chunk_processes]
+        
+        intersections_dist = pd.concat(intersection_results)
+
+        return intersections_dist
+
+    def _snap_part(self, gdf_chunk, lines):
+        offset = 500
+
+        bbox = gdf_chunk.bounds + [-offset, -offset, offset, offset]
+        hits = bbox.apply(lambda row: list(lines.sindex.intersection(row)), axis=1)
+
+        tmp = pd.DataFrame({
+            # index of points table
+            "pt_idx": np.repeat(hits.index, hits.apply(len)),    # ordinal position of line - access via iloc later
+            "line_i": np.concatenate(hits.values)
+        })
+        # Join back to the lines on line_i; we use reset_index() to 
+        # give us the ordinal position of each line
+        tmp = tmp.join(lines.reset_index(drop=True), on="line_i")
+        # Join back to the original points to get their geometry
+        # rename the point geometry as "point"
+        tmp = tmp.join(gdf_chunk.geometry.rename("point"), on="pt_idx")
+        # Convert back to a GeoDataFrame, so we can do spatial ops
+        tmp = gpd.GeoDataFrame(tmp, geometry="geometry", crs=gdf_chunk.crs)
+
+        tmp["snap_dist"] = tmp.geometry.distance(gpd.GeoSeries(tmp.point))
+        # Discard any lines that are greater than tolerance from points
+        tolerance = 100
+        #tmp = tmp.loc[tmp.snap_dist <= tolerance]
+        # Sort on ascending snap distance, so that closest goes to top
+        tmp = tmp.sort_values(by=["snap_dist"])
+        # group by the index of the points and take the first, which is the
+        # closest line
+        closest = tmp.groupby("pt_idx").first()
+
+        # construct a GeoDataFrame of the closest lines
+        return  gpd.GeoDataFrame(closest, geometry="geometry")
 
     def points_to_multipoint(self, data):
         coords = set()
@@ -26,37 +78,10 @@ class Processor():
         """
         # this creates and also provides us access to the spatial index
         lines = lines.to_crs('epsg:3857')
-        self.lines = lines
+        #self.lines = lines
         points = points.to_crs('epsg:3857')
-        offset = 500
-        bbox = points.bounds + [-offset, -offset, offset, offset]
-        hits = bbox.apply(lambda row: list(lines.sindex.intersection(row)), axis=1)
 
-        tmp = pd.DataFrame({
-            # index of points table
-            "pt_idx": np.repeat(hits.index, hits.apply(len)),    # ordinal position of line - access via iloc later
-            "line_i": np.concatenate(hits.values)
-        })
-        # Join back to the lines on line_i; we use reset_index() to 
-        # give us the ordinal position of each line
-        tmp = tmp.join(lines.reset_index(drop=True), on="line_i")
-        # Join back to the original points to get their geometry
-        # rename the point geometry as "point"
-        tmp = tmp.join(points.geometry.rename("point"), on="pt_idx")
-        # Convert back to a GeoDataFrame, so we can do spatial ops
-        tmp = gpd.GeoDataFrame(tmp, geometry="geometry", crs=points.crs)
-
-        tmp["snap_dist"] = tmp.geometry.distance(gpd.GeoSeries(tmp.point))
-        # Discard any lines that are greater than tolerance from points
-        tolerance = 100
-        #tmp = tmp.loc[tmp.snap_dist <= tolerance]
-        # Sort on ascending snap distance, so that closest goes to top
-        tmp = tmp.sort_values(by=["snap_dist"])
-        # group by the index of the points and take the first, which is the
-        # closest line
-        closest = tmp.groupby("pt_idx").first()
-        # construct a GeoDataFrame of the closest lines
-        closest = gpd.GeoDataFrame(closest, geometry="geometry")
+        closest = self._parallelize(points, lines)
         # Position of nearest point from start of the line
         series = gpd.GeoSeries(closest.point)
         series.crs = {'init': 'epsg:3857'}
@@ -69,13 +94,18 @@ class Processor():
         snapped = gpd.GeoDataFrame(
             closest[line_columns],geometry=new_pts, crs="epsg:3857")
         closest['snapped'] = snapped.geometry
-        split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
-        split_lines_df = pd.DataFrame({"geom": split_lines})
-        self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
+        # split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
+        # split_lines_df = pd.DataFrame({"geom": split_lines})
+        # self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
         snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
         snap_df = pd.DataFrame({"geom": snap_lines})
         snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
-        self.snap_lines = snap_gdf
+        snap_gdf.to_crs('epsg:4326')
+        snap_gdf['length'] = snap_gdf.geometry.apply(lambda x: x.length)
+        snap_gdf['lat'] = snap_gdf.geometry.apply(lambda x: x.coords[0][0])
+        snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
+
+        snap_gdf[["lat", "lon", "length"]].to_csv("connections.csv")
         # gdf.to_crs("epsg:4326").to_file("test_lines.shp")
         # Join back to the original points:
         # updated_points = points.drop(columns=["geometry"]).join(snapped)
