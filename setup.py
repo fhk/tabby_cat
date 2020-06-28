@@ -41,7 +41,7 @@ setuptools.setup(
         "pandas==1.0.3",
         "pycparser==2.20",
         "pyOpenSSL==19.1.0",
-        "pyproj==1.9.6",
+        "pyproj==2.6.1.post1",
         "PySocks==1.7.1",
         "python-dateutil==2.8.1",
         "pytz==2020.1",
