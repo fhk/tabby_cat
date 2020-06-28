@@ -100,8 +100,8 @@ class Processor():
         snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
         snap_df = pd.DataFrame({"geom": snap_lines})
         snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
-        snap_gdf = snap_gdf.to_crs('epsg:4326')
         snap_gdf['length'] = snap_gdf.geometry.apply(lambda x: x.length)
+        snap_gdf = snap_gdf.to_crs('epsg:4326')
         snap_gdf['lat'] = snap_gdf.geometry.apply(lambda x: x.coords[0][0])
         snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
 
