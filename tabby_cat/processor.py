@@ -1,18 +1,23 @@
 """
 Run the DataLoader dataframes through processing
 """
+import os
+
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import multiprocessing as mp
 from shapely.ops import split
 from shapely.geometry import LineString, MultiPoint
+from pyproj import Proj, transform
 
 class Processor():
-    def __init__(self):
+    def __init__(self, where):
+        self.where = where
         self.snap_lines = None
         self.all_lines = None
         self.cut_lines = None
+        self.demand = set()
 
     def _parallelize(self, points, lines):
         """
@@ -33,7 +38,7 @@ class Processor():
         return intersections_dist
 
     def _snap_part(self, gdf_chunk, lines):
-        offset = 500
+        offset = 1000
 
         bbox = gdf_chunk.bounds + [-offset, -offset, offset, offset]
         hits = bbox.apply(lambda row: list(lines.sindex.intersection(row)), axis=1)
@@ -69,10 +74,11 @@ class Processor():
         coords = set()
         for p in data.snapped:
             coords.add(p.coords[0])
+            self.demand.add(p.coords[0])
 
         return data.geometry.iloc[0].difference(MultiPoint(list(coords)).buffer(1e-7))
 
-    def snap_points_to_line(self, lines, points):
+    def snap_points_to_line(self, lines, points, write=False):
         """
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
         """
@@ -88,30 +94,40 @@ class Processor():
         pos = closest.geometry.project(series)
         # Get new point location geometry
         new_pts = closest.geometry.interpolate(pos)
-        #Identify the columns we want to copy from the closest line to the point, such as a line ID.
+        # Identify the columns we want to copy from the closest line to the point, such as a line ID.
         line_columns = ['line_i', 'osm_id', 'code', 'fclass']
         # Create a new GeoDataFrame from the columns from the closest line and new point geometries (which will be called "geometries")
         snapped = gpd.GeoDataFrame(
             closest[line_columns],geometry=new_pts, crs="epsg:3857")
         closest['snapped'] = snapped.geometry
-        # split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
-        # split_lines_df = pd.DataFrame({"geom": split_lines})
-        # self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
-        snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
-        snap_df = pd.DataFrame({"geom": snap_lines})
-        snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
-        snap_gdf['length'] = snap_gdf.geometry.apply(lambda x: x.length)
-        snap_gdf = snap_gdf.to_crs('epsg:4326')
-        snap_gdf['lat'] = snap_gdf.geometry.apply(lambda x: x.coords[0][0])
-        snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
-
-        snap_gdf[["lat", "lon", "length"]].to_csv("connections.csv")
-        # gdf.to_crs("epsg:4326").to_file("test_lines.shp")
+        split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
+        split_lines_df = pd.DataFrame({"geom": split_lines})
+        self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857").to_crs('epsg:4326')
+        inProj = Proj(init='epsg:3857')
+        outProj = Proj(init='epsg:4326')
+        self.demand = map(lambda x: transform(inProj, outProj, x[0], x[1]), self.demand)
         # Join back to the original points:
-        # updated_points = points.drop(columns=["geometry"]).join(snapped)
+        updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
-        # updated_points = updated_points.dropna(subset=["geometry"]).to_crs('epsg:4326')
-        #updated_points.to_file("updated.shp")
+        updated_points = updated_points.dropna(subset=["geometry"]).to_crs('epsg:4326')
+        
+
+
+        if write:
+            os.mkdir(f"{self.where}/output")
+            updated_points.to_file(f"{self.where}/output/updated.shp")
+            snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
+            snap_df = pd.DataFrame({"geom": snap_lines})
+            snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
+            snap_gdf['length'] = snap_gdf.geometry.apply(lambda x: x.length)
+            snap_gdf = snap_gdf.to_crs('epsg:4326')
+            snap_gdf['lat'] = snap_gdf.geometry.apply(lambda x: x.coords[0][0])
+            snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
+            snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
+            snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
+
+
+
 
     def geom_to_graph(self):
         self.lines["start"] = self.lines.geometry.apply(lambda x: x.coords[0])

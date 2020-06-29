@@ -49,7 +49,7 @@ class DataLoader():
         "New York": "ny",
         "North Carolina": "nc",
         "North Dakota": "nd",
-        "Ohio": "oh",
+        "Ohio": "oh", # Do this one first
         "Oklahoma": "ok",
         "Oregon": "or",
         "Pennsylvania": "pa",
@@ -89,7 +89,8 @@ class DataLoader():
             if region is "California":
                 for cal in californias:
                     download_data_geofabrik(cal)
-            full_url = f"{self.geofabrik_url}{region.lower()}{self.geofabrik_ending_url_string}"
+            location = region.lower().replace(" ", "-")
+            full_url = f"{self.geofabrik_url}{location}{self.geofabrik_ending_url_string}"
             page = requests.get(full_url, stream=True)
             with open(f"{region}.zip", "wb") as fd:
                 for chunk in page.iter_content(chunk_size=128):
@@ -106,9 +107,28 @@ class DataLoader():
         soup = BeautifulSoup(page.content, 'html.parser')
         links = soup.find_all('a', href=True)
         files = 0
+        zips = 0
         for l in links:
             if l.text[:5] == f"us/{self.known_regions[region]}":
                 link = l.attrs.get("href")
+                if link[-3:] == "zip":
+                    data = requests.get(link, stream=True)
+                    full_file_name = f"./{region}/{self.known_regions[region]}_{zips}.zip"
+                    zips += 1
+                    if not os.path.exists(full_file_name):
+                        with open(full_file_name, "wb") as output:
+                            for chunk in data.iter_content(chunk_size=128):
+                                output.write(chunk)
+                    with zipfile.ZipFile(full_file_name) as zip_ref:
+                        extracted = zip_ref.namelist()
+                        zip_ref.extractall(f"{region}/{zips}")
+                        for e in extracted:
+                            if e[-3:] == "shp":
+                                self.add_files.append(f"{region}/{zips}/{e}")
+
+                            if e[-3] == "csv":
+                                self.add_files.append(f"{region}/{zips}/{e}")
+
                 if link[-3:] == "csv":
                     data = requests.get(link, stream=True)
                     full_file_name = f"./{region}/{self.known_regions[region]}_{files}.csv"
@@ -118,6 +138,8 @@ class DataLoader():
                             for chunk in data.iter_content(chunk_size=128):
                                 output.write(chunk)
                     files += 1
+
+
 
     def read_csv(self, file_name):
         return pd.read_csv(file_name, usecols=self.data_cols)
@@ -141,15 +163,21 @@ class DataLoader():
 
     def read_address_data(self, region):
         for file_name in self.add_files:
-            df = self.read_csv(file_name)
-            gdf = gpd.GeoDataFrame(
-                df.drop(['OA:x', 'OA:y'], axis=1),
-                    crs={'init': 'epsg:4326'},
-                    geometry=[Point(xy) for xy in zip(df['OA:x'], df['OA:y'])])
+            if file_name[-3:] == 'csv':
+                df = self.read_csv(file_name)
+                gdf = gpd.GeoDataFrame(
+                    df.drop(['OA:x', 'OA:y'], axis=1),
+                        crs={'init': 'epsg:4326'},
+                        geometry=[Point(xy) for xy in zip(df['OA:x'], df['OA:y'])])
+            if file_name[-3:] == 'shp':
+                gdf = gpd.read_file(file_name)
+                gdf = gdf.to_crs("epsg:4326")
             if self.address_df is None:
                 self.address_df = gdf
             else:
                 self.address_df = self.address_df.append(gdf, ignore_index=True)
+
+        self.address_df = self.address_df.drop_duplicates()
             
 
 
