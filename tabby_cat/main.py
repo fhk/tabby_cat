@@ -17,7 +17,7 @@ def main():
 
     pr = Processor(where)
     pr.snap_points_to_line(dl.streets_df, dl.address_df, write=True)
-    #   pr.geom_to_graph()
+    pr.geom_to_graph()
 
 
 if __name__ == "__main__":

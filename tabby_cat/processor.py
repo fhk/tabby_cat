@@ -18,6 +18,8 @@ class Processor():
         self.all_lines = None
         self.cut_lines = None
         self.demand = set()
+        self.inProj = Proj(init='epsg:3857')
+        self.outProj = Proj(init='epsg:4326')
 
     def _parallelize(self, points, lines):
         """
@@ -78,13 +80,23 @@ class Processor():
 
         return data.geometry.iloc[0].difference(MultiPoint(list(coords)).buffer(1e-7))
 
+    def project_array(self, coordinates):
+        """
+        Project a numpy (n,2) array in projection srcp to projection dstp
+        Returns a numpy (n,2) array.
+        """
+
+        fx, fy = pyproj.transform(self.inProj, self.outProj, coordinates[:,0], coordinates[:,1])
+        # Re-create (n,2) coordinates
+        return np.dstack([fx, fy])[0]
+
     def snap_points_to_line(self, lines, points, write=False):
         """
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
         """
         # this creates and also provides us access to the spatial index
         lines = lines.to_crs('epsg:3857')
-        #self.lines = lines
+        self.lines = lines
         points = points.to_crs('epsg:3857')
 
         closest = self._parallelize(points, lines)
@@ -103,9 +115,7 @@ class Processor():
         split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
         split_lines_df = pd.DataFrame({"geom": split_lines})
         self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857").to_crs('epsg:4326')
-        inProj = Proj(init='epsg:3857')
-        outProj = Proj(init='epsg:4326')
-        self.demand = map(lambda x: transform(inProj, outProj, x[0], x[1]), self.demand)
+ 
         # Join back to the original points:
         updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
@@ -126,14 +136,46 @@ class Processor():
             snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
             snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
 
-
-
-
     def geom_to_graph(self):
         self.lines["start"] = self.lines.geometry.apply(lambda x: x.coords[0])
         self.lines["end"] = self.lines.geometry.apply(lambda x: x.coords[-1])
         self.cut_lines["start"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[0] for geom in x] if x.geom_type == "MultiLineString" else x.coords[0])
         self.cut_lines["end"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[-1] for geom in x] if x.geom_type == "MultiLineString" else x.coords[-1])
+        all_nodes = set()
+        look_up = {}
+        index = 0
+        for r in self.lines[['start', 'end']]:
+            s_coord_string = f'[{r.start[0]:.7f}, {r.start[1]:.7f}]'
+            e_coord_string = f'[{r.end[0]:.7f}, {r.end[1]:.7f}]'
+            
+            if s_coord_string not in all_nodes:
+                look_up[s_coord_string] = index
+                index += 1
+            if e_coord_string not in all_nodes:
+                look_up[e_coord_string] =  index
+                index += 1
+
+        for r in cut_lines[['start', 'end']]:
+            for p in r.start:
+                s_coord_string = f'[{p[0]:.7f}, {p[1]:.7f}]'
+           
+                if s_coord_string not in all_nodes:
+                    look_up[s_coord_string] = index
+                    index += 1
+            for p in r.end:
+                s_coord_string = f'[{p[0]:.7f}, {p[1]:.7f}]'
+           
+                if s_coord_string not in all_nodes:
+                    look_up[s_coord_string] = index
+                    index += 1
+        self.nodes = look_up
+
+
+                
+
+
+
+
 
     def graph_to_geom(self):
         pass
