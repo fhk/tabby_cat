@@ -7,7 +7,7 @@ from tabby_cat.processor import Processor
 
 
 def main():
-    where = "Alaska"
+    where = "Vermont"
     dl = DataLoader()
     dl.download_data_geofabrik(where)
     dl.read_street_data(where)
@@ -16,7 +16,7 @@ def main():
     #dl.address_df.to_file("address.shp")
 
     pr = Processor(where)
-    pr.snap_points_to_line(dl.streets_df, dl.address_df, write=True)
+    pr.snap_points_to_line(dl.streets_df, dl.address_df)
     pr.geom_to_graph()
 
 

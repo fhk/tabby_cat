@@ -136,46 +136,69 @@ class Processor():
             snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
             snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
 
+    def set_node_ids_single_line(self, r):
+        s_coord_string = f'[{r[1].start[0]:.1f}, {r[1].start[1]:.1f}]'
+        e_coord_string = f'[{r[1].end[0]:.1f}, {r[1].end[1]:.1f}]'
+
+        start = self.look_up.get(s_coord_string, None)
+        if start is None:
+            self.look_up[s_coord_string] = self.index
+            start = self.index
+            self.all_nodes.add(self.index)
+            self.index += 1
+
+        end = look_up.get(e_coord_string, None)
+        if end is None:
+            self.look_up[e_coord_string] =  self.index
+            end = self.index
+            self.all_nodes.add(self.index)
+            self.index += 1
+
+        self.edges.add((start, end))
+
+    def set_node_ids_multi_line(self, r):
+        start_nodes = []
+        end_nodes = []
+        for p in r[1].start:
+            s_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
+            start = self.look_up.get(s_coord_string, None)
+            if start is None:
+                self.look_up[s_coord_string] = self.index
+                start_nodes.append(self.index)
+                start = self.index
+                index += 1
+            else:
+                start_nodes.append(start)
+
+            start_nodes.append(start)
+
+        for p in r[1].end:
+            e_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
+            end = self.look_up.get(e_coord_string, None)
+            if end is None:
+                self.look_up[s_coord_string] = self.index
+                end_nodes.append(index)
+                start = self.index
+                index += 1
+            else:
+                end_nodes.append(end)
+
+            end_nodes.append(end)
+
+        self.edges.update(tuple(zip(start_nodes, end_nodes)))
+
     def geom_to_graph(self):
         self.lines["start"] = self.lines.geometry.apply(lambda x: x.coords[0])
         self.lines["end"] = self.lines.geometry.apply(lambda x: x.coords[-1])
         self.cut_lines["start"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[0] for geom in x] if x.geom_type == "MultiLineString" else x.coords[0])
         self.cut_lines["end"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[-1] for geom in x] if x.geom_type == "MultiLineString" else x.coords[-1])
-        all_nodes = set()
-        look_up = {}
-        index = 0
-        for r in self.lines[['start', 'end']]:
-            s_coord_string = f'[{r.start[0]:.7f}, {r.start[1]:.7f}]'
-            e_coord_string = f'[{r.end[0]:.7f}, {r.end[1]:.7f}]'
-            
-            if s_coord_string not in all_nodes:
-                look_up[s_coord_string] = index
-                index += 1
-            if e_coord_string not in all_nodes:
-                look_up[e_coord_string] =  index
-                index += 1
+        self.look_up = {}
+        self.edges = set()
+        self.index = 0
+        self.lines.apply(lambda x: self.set_node_ids_single_line(x))
+        self.cut_lines.apply(lambda x: self.set_node_ids_multi_line(x))
 
-        for r in cut_lines[['start', 'end']]:
-            for p in r.start:
-                s_coord_string = f'[{p[0]:.7f}, {p[1]:.7f}]'
-           
-                if s_coord_string not in all_nodes:
-                    look_up[s_coord_string] = index
-                    index += 1
-            for p in r.end:
-                s_coord_string = f'[{p[0]:.7f}, {p[1]:.7f}]'
-           
-                if s_coord_string not in all_nodes:
-                    look_up[s_coord_string] = index
-                    index += 1
-        self.nodes = look_up
-
-
-                
-
-
-
-
+        import pdb; pdb.set_trace()
 
     def graph_to_geom(self):
         pass

@@ -108,6 +108,9 @@ class DataLoader():
         links = soup.find_all('a', href=True)
         files = 0
         zips = 0
+        statewide = [l for l in links if l.text[:15] == f"us/{self.known_regions[region]}/statewide"]
+        if statewide:
+            links = statewide
         for l in links:
             if l.text[:5] == f"us/{self.known_regions[region]}":
                 link = l.attrs.get("href")
@@ -165,6 +168,10 @@ class DataLoader():
         for file_name in self.add_files:
             if file_name[-3:] == 'csv':
                 df = self.read_csv(file_name)
+                if 'X' in df.columns:
+                    df['OA:x'] = df['X']
+                    df['OA:y'] = df['Y']
+
                 gdf = gpd.GeoDataFrame(
                     df.drop(['OA:x', 'OA:y'], axis=1),
                         crs={'init': 'epsg:4326'},
