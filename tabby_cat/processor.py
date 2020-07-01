@@ -157,8 +157,8 @@ class Processor():
     def set_node_ids_multi_line(self, s, e):
         start_nodes = []
         end_nodes = []
-        for p in s:
-            s_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
+        if type(s) == tuple:
+            s_coord_string = f'[{s[0]:.1f}, {s[1]:.1f}]'
             start = self.look_up.get(s_coord_string, None)
             if start is None:
                 self.look_up[s_coord_string] = self.index
@@ -166,9 +166,18 @@ class Processor():
                 self.index += 1
             else:
                 start_nodes.append(start)
-
-        for p in e:
-            e_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
+        else:
+            for p in s:
+                s_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
+                start = self.look_up.get(s_coord_string, None)
+                if start is None:
+                    self.look_up[s_coord_string] = self.index
+                    start_nodes.append(self.index)
+                    self.index += 1
+                else:
+                    start_nodes.append(start)
+        if type(e) == tuple:
+            e_coord_string = f'[{e[0]:.1f}, {e[1]:.1f}]'
             end = self.look_up.get(e_coord_string, None)
             if end is None:
                 self.look_up[s_coord_string] = self.index
@@ -176,6 +185,16 @@ class Processor():
                 self.index += 1
             else:
                 end_nodes.append(end)
+        else:    
+            for p in e:
+                e_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
+                end = self.look_up.get(e_coord_string, None)
+                if end is None:
+                    self.look_up[s_coord_string] = self.index
+                    end_nodes.append(self.index)
+                    self.index += 1
+                else:
+                    end_nodes.append(end)
 
         self.edges.update(tuple(zip(start_nodes, end_nodes)))
 
