@@ -164,7 +164,7 @@ class Processor():
                 self.look_up[s_coord_string] = self.index
                 start_nodes.append(self.index)
                 start = self.index
-                index += 1
+                self.index += 1
             else:
                 start_nodes.append(start)
 
@@ -175,9 +175,9 @@ class Processor():
             end = self.look_up.get(e_coord_string, None)
             if end is None:
                 self.look_up[s_coord_string] = self.index
-                end_nodes.append(index)
+                end_nodes.append(self.index)
                 start = self.index
-                index += 1
+                self.index += 1
             else:
                 end_nodes.append(end)
 
