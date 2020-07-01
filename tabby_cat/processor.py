@@ -95,8 +95,8 @@ class Processor():
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
         """
         # this creates and also provides us access to the spatial index
-        lines = lines.to_crs('epsg:3857')
         self.lines = lines
+        lines = lines.to_crs('epsg:3857')
         points = points.to_crs('epsg:3857')
 
         closest = self._parallelize(points, lines)
