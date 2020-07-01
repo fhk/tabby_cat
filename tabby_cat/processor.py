@@ -148,7 +148,7 @@ class Processor():
 
         end = self.look_up.get(e_coord_string, None)
         if end is None:
-            self.look_up[e_coord_string] =  self.index
+            self.look_up[e_coord_string] = self.index
             end = self.index
             self.index += 1
 
@@ -163,12 +163,9 @@ class Processor():
             if start is None:
                 self.look_up[s_coord_string] = self.index
                 start_nodes.append(self.index)
-                start = self.index
                 self.index += 1
             else:
                 start_nodes.append(start)
-
-            start_nodes.append(start)
 
         for p in e:
             e_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
@@ -176,12 +173,9 @@ class Processor():
             if end is None:
                 self.look_up[s_coord_string] = self.index
                 end_nodes.append(self.index)
-                start = self.index
                 self.index += 1
             else:
                 end_nodes.append(end)
-
-            end_nodes.append(end)
 
         self.edges.update(tuple(zip(start_nodes, end_nodes)))
 
