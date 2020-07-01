@@ -136,9 +136,9 @@ class Processor():
             snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
             snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
 
-    def set_node_ids_single_line(self, r):
-        s_coord_string = f'[{r[1].start[0]:.1f}, {r[1].start[1]:.1f}]'
-        e_coord_string = f'[{r[1].end[0]:.1f}, {r[1].end[1]:.1f}]'
+    def set_node_ids_single_line(self, s, e):
+        s_coord_string = f'[{s[0]:.1f}, {s[1]:.1f}]'
+        e_coord_string = f'[{e[0]:.1f}, {e[1]:.1f}]'
 
         start = self.look_up.get(s_coord_string, None)
         if start is None:
@@ -156,10 +156,10 @@ class Processor():
 
         self.edges.add((start, end))
 
-    def set_node_ids_multi_line(self, r):
+    def set_node_ids_multi_line(self, s, e):
         start_nodes = []
         end_nodes = []
-        for p in r[1].start:
+        for p in s:
             s_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
             start = self.look_up.get(s_coord_string, None)
             if start is None:
@@ -172,7 +172,7 @@ class Processor():
 
             start_nodes.append(start)
 
-        for p in r[1].end:
+        for p in e:
             e_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
             end = self.look_up.get(e_coord_string, None)
             if end is None:
@@ -195,8 +195,8 @@ class Processor():
         self.look_up = {}
         self.edges = set()
         self.index = 0
-        self.lines.apply(lambda x: self.set_node_ids_single_line(x))
-        self.cut_lines.apply(lambda x: self.set_node_ids_multi_line(x))
+        self.lines.apply(lambda x: self.set_node_ids_single_line(x.start, x.end), axis=1)
+        self.cut_lines.apply(lambda x: self.set_node_ids_multi_line(x.start, x.end), axis=1)
 
         import pdb; pdb.set_trace()
 
