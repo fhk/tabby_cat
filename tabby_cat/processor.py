@@ -136,25 +136,7 @@ class Processor():
             snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
             snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
 
-    def set_node_ids_single_line(self, s, e):
-        s_coord_string = f'[{s[0]:.1f}, {s[1]:.1f}]'
-        e_coord_string = f'[{e[0]:.1f}, {e[1]:.1f}]'
-
-        start = self.look_up.get(s_coord_string, None)
-        if start is None:
-            self.look_up[s_coord_string] = self.index
-            start = self.index
-            self.index += 1
-
-        end = self.look_up.get(e_coord_string, None)
-        if end is None:
-            self.look_up[e_coord_string] = self.index
-            end = self.index
-            self.index += 1
-
-        self.edges.add((start, end))
-
-    def set_node_ids_multi_line(self, s, e):
+    def set_node_ids(self, s, e):
         start_nodes = []
         end_nodes = []
         if type(s) == tuple:
@@ -180,17 +162,17 @@ class Processor():
             e_coord_string = f'[{e[0]:.1f}, {e[1]:.1f}]'
             end = self.look_up.get(e_coord_string, None)
             if end is None:
-                self.look_up[s_coord_string] = self.index
+                self.look_up[e_coord_string] = self.index
                 end_nodes.append(self.index)
                 self.index += 1
             else:
                 end_nodes.append(end)
-        else:    
+        else:
             for p in e:
                 e_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
                 end = self.look_up.get(e_coord_string, None)
                 if end is None:
-                    self.look_up[s_coord_string] = self.index
+                    self.look_up[e_coord_string] = self.index
                     end_nodes.append(self.index)
                     self.index += 1
                 else:
@@ -206,8 +188,8 @@ class Processor():
         self.look_up = {}
         self.edges = set()
         self.index = 0
-        self.lines.apply(lambda x: self.set_node_ids_single_line(x.start, x.end), axis=1)
-        self.cut_lines.apply(lambda x: self.set_node_ids_multi_line(x.start, x.end), axis=1)
+        self.lines.apply(lambda x: self.set_node_ids(x.start, x.end), axis=1)
+        self.cut_lines.apply(lambda x: self.set_node_ids(x.start, x.end), axis=1)
 
         import pdb; pdb.set_trace()
 
