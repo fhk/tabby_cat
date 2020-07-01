@@ -146,7 +146,7 @@ class Processor():
             start = self.index
             self.index += 1
 
-        end = look_up.get(e_coord_string, None)
+        end = self.look_up.get(e_coord_string, None)
         if end is None:
             self.look_up[e_coord_string] =  self.index
             end = self.index
