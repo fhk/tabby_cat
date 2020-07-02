@@ -138,7 +138,7 @@ class Processor():
             snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
             snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
 
-    def set_node_ids(geometry):
+    def set_node_ids(self, geometry):
         start = None
         end = None
         if geometry.geom_type == "LineString":
