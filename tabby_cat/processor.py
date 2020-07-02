@@ -157,7 +157,7 @@ class Processor():
                 self.look_up[e_coord_string] = self.index
                 end = self.index
                 self.index += 1
-            self.edge[(start, end)] = geometry.length
+            self.edges[(start, end)] = geometry.length
         else:
             for line in geometry:
                 coords = line.coords[:]
@@ -175,7 +175,7 @@ class Processor():
                     self.look_up[e_coord_string] = self.index
                     end = self.index
                     self.index += 1
-                self.edge[(start, end)] = line.length
+                self.edges[(start, end)] = line.length
 
     def geom_to_graph(self):
         self.look_up = {}
