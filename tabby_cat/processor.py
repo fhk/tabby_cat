@@ -182,8 +182,8 @@ class Processor():
         self.edges = OrderedDict()
         self.index = 0
 
-        self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x), axis=1)
-        self.lines.geometry.apply(lambda x: self.set_node_ids(x), axis=1)
+        self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
+        self.lines.geometry.apply(lambda x: self.set_node_ids(x))
 
 
         import pdb; pdb.set_trace()
