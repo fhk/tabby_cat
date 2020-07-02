@@ -2,7 +2,7 @@
 Run the DataLoader dataframes through processing
 """
 import os
-from collections import OrderedSet
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -154,9 +154,7 @@ class Processor():
                 self.look_up[e_coord_string] = self.index
                 end = self.index
                 self.index += 1
-            if (start, end) not in self.edges:
-                self.lengths.append(geometry.length)
-                self.edges.add((start, end))
+            self.edge[(start, end)] = geometry.length
         else:
             for i, (p1, p2) in enumerate(zip(s, e)):
                 s_coord_string = f'[{p1[0]:.1f}, {p1[1]:.1f}]'
@@ -171,9 +169,7 @@ class Processor():
                     self.look_up[e_coord_string] = self.index
                     end = self.index
                     self.index += 1
-                if (start, end) not in self.edges:
-                    self.lengths.append(geometry[i].length)
-                    self.edges.add((start, end))
+                self.edge[(start, end)] = geometry[i].length
 
     def geom_to_graph(self):
         self.lines["start"] = self.lines.geometry.apply(lambda x: x.coords[0])
@@ -181,9 +177,8 @@ class Processor():
         self.cut_lines["start"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[0] for geom in x] if x.geom_type == "MultiLineString" else x.coords[0])
         self.cut_lines["end"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[-1] for geom in x] if x.geom_type == "MultiLineString" else x.coords[-1])
         self.look_up = {}
-        self.edges = OrderedSet()
+        self.edges = OrderedDict()
         self.index = 0
-        self.lengths = []
         self.cut_lines.apply(lambda x: self.set_node_ids(x.start, x.end, x.geometry), axis=1)
         self.lines.apply(lambda x: self.set_node_ids(x.start, x.end, x.geometry), axis=1)
 
