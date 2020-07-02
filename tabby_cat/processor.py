@@ -160,7 +160,7 @@ class Processor():
             self.edge[(start, end)] = geometry.length
         else:
             for line in geometry:
-                coords = geometry.coords[:]
+                coords = line.coords[:]
                 s = coords[0]
                 e = coords[-1]
                 s_coord_string = f'[{s[0]:.1f}, {s[1]:.1f}]'
