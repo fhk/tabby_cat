@@ -2,6 +2,7 @@
 Run the DataLoader dataframes through processing
 """
 import os
+from collections import OrderedSet
 
 import numpy as np
 import pandas as pd
@@ -95,9 +96,10 @@ class Processor():
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
         """
         # this creates and also provides us access to the spatial index
-        self.lines = lines
+
         lines = lines.to_crs('epsg:3857')
         points = points.to_crs('epsg:3857')
+        self.lines = lines
 
         closest = self._parallelize(points, lines)
         # Position of nearest point from start of the line
@@ -114,7 +116,7 @@ class Processor():
         closest['snapped'] = snapped.geometry
         split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
         split_lines_df = pd.DataFrame({"geom": split_lines})
-        self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857").to_crs('epsg:4326')
+        self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
  
         # Join back to the original points:
         updated_points = points.drop(columns=["geometry"]).join(snapped)
@@ -136,49 +138,42 @@ class Processor():
             snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
             snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
 
-    def set_node_ids(self, s, e):
-        start_nodes = []
-        end_nodes = []
+    def set_node_ids(self, s, e, geometry):
+        start = None
+        end = None
         if type(s) == tuple:
             s_coord_string = f'[{s[0]:.1f}, {s[1]:.1f}]'
             start = self.look_up.get(s_coord_string, None)
             if start is None:
                 self.look_up[s_coord_string] = self.index
-                start_nodes.append(self.index)
+                start = self.index
                 self.index += 1
-            else:
-                start_nodes.append(start)
-        else:
-            for p in s:
-                s_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
-                start = self.look_up.get(s_coord_string, None)
-                if start is None:
-                    self.look_up[s_coord_string] = self.index
-                    start_nodes.append(self.index)
-                    self.index += 1
-                else:
-                    start_nodes.append(start)
-        if type(e) == tuple:
             e_coord_string = f'[{e[0]:.1f}, {e[1]:.1f}]'
             end = self.look_up.get(e_coord_string, None)
             if end is None:
                 self.look_up[e_coord_string] = self.index
-                end_nodes.append(self.index)
+                end = self.index
                 self.index += 1
-            else:
-                end_nodes.append(end)
+            if (start, end) not in self.edges:
+                self.lengths.append(geometry.length)
+                self.edges.add((start, end))
         else:
-            for p in e:
-                e_coord_string = f'[{p[0]:.1f}, {p[1]:.1f}]'
+            for i, (p1, p2) in enumerate(zip(s, e)):
+                s_coord_string = f'[{p1[0]:.1f}, {p1[1]:.1f}]'
+                start = self.look_up.get(s_coord_string, None)
+                if start is None:
+                    self.look_up[s_coord_string] = self.index
+                    start = self.index
+                    self.index += 1
+                e_coord_string = f'[{p2[0]:.1f}, {p2[1]:.1f}]'
                 end = self.look_up.get(e_coord_string, None)
                 if end is None:
                     self.look_up[e_coord_string] = self.index
-                    end_nodes.append(self.index)
+                    end = self.index
                     self.index += 1
-                else:
-                    end_nodes.append(end)
-
-        self.edges.update(tuple(zip(start_nodes, end_nodes)))
+                if (start, end) not in self.edges:
+                    self.lengths.append(geometry[i].length)
+                    self.edges.add((start, end))
 
     def geom_to_graph(self):
         self.lines["start"] = self.lines.geometry.apply(lambda x: x.coords[0])
@@ -186,10 +181,12 @@ class Processor():
         self.cut_lines["start"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[0] for geom in x] if x.geom_type == "MultiLineString" else x.coords[0])
         self.cut_lines["end"] = self.cut_lines.geometry.apply(lambda x: [geom.coords[-1] for geom in x] if x.geom_type == "MultiLineString" else x.coords[-1])
         self.look_up = {}
-        self.edges = set()
+        self.edges = OrderedSet()
         self.index = 0
-        self.lines.apply(lambda x: self.set_node_ids(x.start, x.end), axis=1)
-        self.cut_lines.apply(lambda x: self.set_node_ids(x.start, x.end), axis=1)
+        self.lengths = []
+        self.cut_lines.apply(lambda x: self.set_node_ids(x.start, x.end, x.geometry), axis=1)
+        self.lines.apply(lambda x: self.set_node_ids(x.start, x.end, x.geometry), axis=1)
+
 
         import pdb; pdb.set_trace()
 
