@@ -26,6 +26,9 @@ class Processor():
         self.inProj = Proj(init='epsg:3857')
         self.outProj = Proj(init='epsg:4326')
         self.loaded = False
+        self.look_up = {}
+        self.edges = OrderedDict()
+        self.index = 0
 
     def _parallelize(self, points, lines):
         """
@@ -191,10 +194,6 @@ class Processor():
                 self.edge_to_geom[(start, end)] = line.wkt
 
     def geom_to_graph(self):
-        self.look_up = {}
-        self.edges = OrderedDict()
-        self.index = 0
-
         if not self.edges:
             self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
             self.lines.geometry.apply(lambda x: self.set_node_ids(x))
