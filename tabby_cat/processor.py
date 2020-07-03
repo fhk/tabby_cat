@@ -2,7 +2,7 @@
 Run the DataLoader dataframes through processing
 """
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 import numpy as np
 import pandas as pd
@@ -19,6 +19,7 @@ class Processor():
         self.all_lines = None
         self.cut_lines = None
         self.demand = set()
+        self.demand_nodes = defaultdict(int)
         self.inProj = Proj(init='epsg:3857')
         self.outProj = Proj(init='epsg:4326')
 
@@ -121,9 +122,7 @@ class Processor():
         # Join back to the original points:
         updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
-        updated_points = updated_points.dropna(subset=["geometry"]).to_crs('epsg:4326')
-        
-
+        self.demand_nodes = updated_points.geometry.apply(lambda x: self.get_demand_nodes(x))
 
         if write:
             os.mkdir(f"{self.where}/output")
@@ -137,6 +136,11 @@ class Processor():
             snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
             snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
             snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
+
+    def get_demand_nodes(self, geometry):
+        coords = geometry.coords[0]
+        coord_string = f'[{coords[0]:.1f}, {coords[1]:.1f}]'
+        self.demand_nodes[coord_string] = 1
 
     def set_node_ids(self, geometry):
         start = None
@@ -184,9 +188,6 @@ class Processor():
 
         self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
         self.lines.geometry.apply(lambda x: self.set_node_ids(x))
-
-
-        import pdb; pdb.set_trace()
 
     def graph_to_geom(self):
         pass

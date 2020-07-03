@@ -4,7 +4,7 @@ Main entry point for tabby cat
 
 from tabby_cat.data_loader import DataLoader
 from tabby_cat.processor import Processor
-
+from tabby_cat.solver import PCSTSolver
 
 def main():
     where = "Vermont"
@@ -19,6 +19,9 @@ def main():
     pr.snap_points_to_line(dl.streets_df, dl.address_df)
     pr.geom_to_graph()
 
+    sl = PCSTSolver(pr.edges, pr.look_up, pr.demand_nodes)
+
+    import pdb; pdb.set_trace()
 
 if __name__ == "__main__":
     main()
