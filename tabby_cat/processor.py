@@ -202,9 +202,9 @@ class Processor():
         g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(g), key=len)
         self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
-        self.edges = OrderedDict(((convert_ids[k[0]], convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
-        self.look_up = {k:convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
-        self.demand_nodes = defaultdict(int, {convert_ids[self.look_up[k]]:v for k, v in self.demand_nodes.items()})
+        self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
+        self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
+        self.demand_nodes = defaultdict(int, {self.convert_ids[self.look_up[k]]:v for k, v in self.demand_nodes.items()})
         self.store_intermediate()
 
     def graph_to_geom(self):
