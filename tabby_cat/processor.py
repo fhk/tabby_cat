@@ -199,16 +199,19 @@ class Processor():
             self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
             self.lines.geometry.apply(lambda x: self.set_node_ids(x))
 
-        g = nx.Graph()
-        g.add_edges_from(self.edges)
-        largest_cc = max(nx.connected_components(g), key=len)
-        self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
-        self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
-        self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
-        self.demand_nodes = defaultdict(int, {v:self.demand_nodes[k] for k, v in self.convert_ids.items()})
+            g = nx.Graph()
+            g.add_edges_from(self.edges)
+            largest_cc = max(nx.connected_components(g), key=len)
+
+            flip_look_up = {v: k for k, v in self.look_up.items()}
+
+            self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
+            self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
+            self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
+            self.demand_nodes = defaultdict(int, {v:self.demand_nodes[flip_look_up[k]] for k, v in self.convert_ids.items()})
+
         demand_not_on_graph = [True for k in self.demand_nodes if not self.look_up.get(k, False)]
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
-        self.store_intermediate()
 
     def graph_to_geom(self):
         pass
