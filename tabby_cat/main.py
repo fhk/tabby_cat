@@ -1,6 +1,7 @@
 """
 Main entry point for tabby cat
 """
+import os
 import logging
 
 from tabby_cat.data_loader import DataLoader
@@ -13,15 +14,18 @@ def main():
     logging.info(f"Running on {where}")
     logging.info("Started DataLoader")
     dl = DataLoader()
-    logging.info("Getting data from geofabrik")
-    dl.download_data_geofabrik(where)
-    logging.info("Reading street data")
-    dl.read_street_data(where)
-    logging.info("Getting data from openaddress") 
-    dl.download_data_openaddress(where)
-    logging.info("Reading address data")
-    dl.read_address_data(where)
-    #dl.address_df.to_file("address.shp")
+
+    if not os.path.isfile("geom_to_graph.pickle"):
+
+        logging.info("Getting data from geofabrik")
+        dl.download_data_geofabrik(where)
+        logging.info("Reading street data")
+        dl.read_street_data(where)
+        logging.info("Getting data from openaddress") 
+        dl.download_data_openaddress(where)
+        logging.info("Reading address data")
+        dl.read_address_data(where)
+        #dl.address_df.to_file("address.shp")
 
     logging.info("Starting processing")
     pr = Processor(where)

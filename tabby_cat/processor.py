@@ -2,12 +2,14 @@
 Run the DataLoader dataframes through processing
 """
 import os
+import pickle
 from collections import OrderedDict, defaultdict
 
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import multiprocessing as mp
+import networkx as nx
 from shapely.ops import split
 from shapely.geometry import LineString, MultiPoint
 from pyproj import Proj, transform
@@ -23,6 +25,7 @@ class Processor():
         self.edge_to_geom = {}
         self.inProj = Proj(init='epsg:3857')
         self.outProj = Proj(init='epsg:4326')
+        self.loaded = False
 
     def _parallelize(self, points, lines):
         """
@@ -98,7 +101,10 @@ class Processor():
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
         """
         # this creates and also provides us access to the spatial index
-
+        if os.path.isfile("graph_to_geom.pickle"):
+            self.load_intermediate()
+            self.loaded = True
+            return
         lines = lines.to_crs('epsg:3857')
         points = points.to_crs('epsg:3857')
         self.lines = lines
@@ -192,5 +198,39 @@ class Processor():
         self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
         self.lines.geometry.apply(lambda x: self.set_node_ids(x))
 
+        g = nx.Graph()
+        g.add_edges_from(self.edges)
+        largest_cc = max(nx.connected_components(g), key=len)
+        self.look_up = {k:v for k, v in self.look_up if v in largest_cc}
+        self.edges = OrderedDict((k, v) for k, v in self.edges if k[0] in largest_cc)
+
+        self.store_intermediate()
+
     def graph_to_geom(self):
         pass
+
+    def load_intermediate(self):
+        with open('demand_nodes.pickle', 'rb') as handle:
+            self.demand_nodes = pickle.load(handle)
+
+        with open('look_up.pickle', 'rb') as handle:
+            self.look_up = pickle.load(handle)
+
+        with open('edges.pickle', 'rb') as handle:
+            self.edges = pickle.load(handle)
+
+        with open('edge_to_geom.pickle', 'rb') as handle:
+            self.edge_to_geom = pickle.load(handle)
+
+    def store_intermediate(self):
+        with open('demand_nodes.pickle', 'wb') as handle:
+            pickle.dump(self.demand_nodes, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open('look_up.pickle', 'wb') as handle:
+            pickle.dump(self.look_up, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open('edges.pickle', 'wb') as handle:
+            pickle.dump(self.edges, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open('edge_to_geom.pickle', 'wb') as handle:
+            pickle.dump(self.edge_to_geom, handle, protocol=pickle.HIGHEST_PROTOCOL)
