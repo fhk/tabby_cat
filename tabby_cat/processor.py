@@ -20,6 +20,7 @@ class Processor():
         self.cut_lines = None
         self.demand = set()
         self.demand_nodes = defaultdict(int)
+        self.edge_to_geom = {}
         self.inProj = Proj(init='epsg:3857')
         self.outProj = Proj(init='epsg:4326')
 
@@ -122,7 +123,7 @@ class Processor():
         # Join back to the original points:
         updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
-        self.demand_nodes = updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
+        updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
 
         if write:
             os.mkdir(f"{self.where}/output")
@@ -162,6 +163,7 @@ class Processor():
                 end = self.index
                 self.index += 1
             self.edges[(start, end)] = geometry.length
+            self.edge_to_geom[(start, end)] = line.wkt
         else:
             for line in geometry:
                 coords = line.coords[:]
@@ -180,6 +182,7 @@ class Processor():
                     end = self.index
                     self.index += 1
                 self.edges[(start, end)] = line.length
+                self.edge_to_geom[(start, end)] = line.wkt
 
     def geom_to_graph(self):
         self.look_up = {}
