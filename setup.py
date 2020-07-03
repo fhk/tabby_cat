@@ -37,6 +37,7 @@ setuptools.setup(
         "mkl-random==1.1.1",
         "mkl-service==2.3.0",
         "munch==2.5.0",
+        "networkx==2.4",
         "numpy==1.18.1",
         "pandas==1.0.3",
         "pcst-fast==1.0.7",
