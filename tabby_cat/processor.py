@@ -122,7 +122,7 @@ class Processor():
         # Join back to the original points:
         updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
-        self.demand_nodes = updated_points.geometry.apply(lambda x: self.get_demand_nodes(x))
+        self.demand_nodes = updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
 
         if write:
             os.mkdir(f"{self.where}/output")
