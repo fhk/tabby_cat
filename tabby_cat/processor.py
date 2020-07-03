@@ -202,7 +202,7 @@ class Processor():
         g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(g), key=len)
         self.look_up = {k:v for k, v in self.look_up.items() if v in largest_cc}
-        self.edges = OrderedDict((k, v) for k, v in self.edges if k[0] in largest_cc)
+        self.edges = OrderedDict((k, v) for k, v in self.edges.items() if k[0] in largest_cc)
 
         self.store_intermediate()
 
