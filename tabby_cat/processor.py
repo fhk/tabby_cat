@@ -163,7 +163,7 @@ class Processor():
                 end = self.index
                 self.index += 1
             self.edges[(start, end)] = geometry.length
-            self.edge_to_geom[(start, end)] = line.wkt
+            self.edge_to_geom[(start, end)] = geometry.wkt
         else:
             for line in geometry:
                 coords = line.coords[:]
