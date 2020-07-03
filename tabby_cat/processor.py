@@ -101,7 +101,7 @@ class Processor():
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
         """
         # this creates and also provides us access to the spatial index
-        if os.path.isfile("graph_to_geom.pickle"):
+        if os.path.isfile("edge_to_geom.pickle"):
             self.load_intermediate()
             self.loaded = True
             return
