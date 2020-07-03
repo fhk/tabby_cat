@@ -207,7 +207,7 @@ class Processor():
         self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
         self.demand_nodes = defaultdict(int, {self.look_up[k]:v for k, v in self.demand_nodes.items() if self.look_up.get(k, False)})
         demand_not_on_graph = [True for k in self.demand_nodes if not self.look_up.get(k, False)]
-        logging.log(f"Missing {demand_not_on_graph} points on connected graph")
+        logging.info(f"Missing {demand_not_on_graph} points on connected graph")
         self.store_intermediate()
 
     def graph_to_geom(self):
