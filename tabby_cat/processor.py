@@ -201,10 +201,10 @@ class Processor():
         g = nx.Graph()
         g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(g), key=len)
-        convert_ids = {n: i for i, n in enumerate(largest_cc)}
+        self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
         self.edges = OrderedDict(((convert_ids[k[0]], convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
         self.look_up = {k:convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
-        self.demand_nodes = defaultdict(int, {convert_ids[k]:v for k, v in self.demand_nodes.items()})
+        self.demand_nodes = defaultdict(int, {convert_ids[self.look_up[k]]:v for k, v in self.demand_nodes.items()})
         self.store_intermediate()
 
     def graph_to_geom(self):
@@ -223,6 +223,9 @@ class Processor():
         with open('edge_to_geom.pickle', 'rb') as handle:
             self.edge_to_geom = pickle.load(handle)
 
+        # with open('convert_ids.pickle', 'rb') as handle:
+        #     self.convert_ids = pickle.load(handle)
+
     def store_intermediate(self):
         with open('demand_nodes.pickle', 'wb') as handle:
             pickle.dump(self.demand_nodes, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -235,3 +238,6 @@ class Processor():
 
         with open('edge_to_geom.pickle', 'wb') as handle:
             pickle.dump(self.edge_to_geom, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open('convert_ids.pickle', 'wb') as handle:
+            pickle.dump(self.convert_ids, handle, protocol=pickle.HIGHEST_PROTOCOL)
