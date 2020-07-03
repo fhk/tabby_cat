@@ -195,8 +195,9 @@ class Processor():
         self.edges = OrderedDict()
         self.index = 0
 
-        self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
-        self.lines.geometry.apply(lambda x: self.set_node_ids(x))
+        if not self.edges:
+            self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
+            self.lines.geometry.apply(lambda x: self.set_node_ids(x))
 
         g = nx.Graph()
         g.add_edges_from(self.edges)
