@@ -20,6 +20,7 @@ def main():
     pr.geom_to_graph()
 
     sl = PCSTSolver(pr.edges, pr.look_up, pr.demand_nodes)
+    sl.solve()
 
     import pdb; pdb.set_trace()
 
