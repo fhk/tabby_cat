@@ -24,8 +24,8 @@ class PCSTSolver(AbstractSolver):
     def solve(self, root=-1, algo='strong', loglevel=0, n=1):
         self.s_vertices, self.s_edges = pcst_fast(
             np.array(list(self.edges.keys())),
-            np.array([self.demand[v] * 10000 for k, v in sorted(self.look_up.items(), key=lambda item: item[1])]),
-            np.array(list(self.edges.values())),
+            np.array([self.demand[v] * 1000 for k, v in sorted(self.look_up.items(), key=lambda item: item[1])]),
+            np.array(list(min(v, 100) for v in self.edges.values())),
             root,
             n,
             algo,
