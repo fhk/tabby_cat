@@ -11,6 +11,7 @@ import pandas as pd
 import geopandas as gpd
 import multiprocessing as mp
 import networkx as nx
+from shapely import wkt
 from shapely.ops import split
 from shapely.geometry import LineString, MultiPoint
 from pyproj import Proj, transform
@@ -100,7 +101,7 @@ class Processor():
         # Re-create (n,2) coordinates
         return np.dstack([fx, fy])[0]
 
-    def snap_points_to_line(self, lines, points, write=False):
+    def snap_points_to_line(self, lines, points, write=True):
         """
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
         """
@@ -124,7 +125,7 @@ class Processor():
         line_columns = ['line_i', 'osm_id', 'code', 'fclass']
         # Create a new GeoDataFrame from the columns from the closest line and new point geometries (which will be called "geometries")
         snapped = gpd.GeoDataFrame(
-            closest[line_columns],geometry=new_pts, crs="epsg:3857")
+            closest[line_columns], geometry=new_pts, crs="epsg:3857")
         closest['snapped'] = snapped.geometry
         split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
         split_lines_df = pd.DataFrame({"geom": split_lines})
@@ -136,7 +137,6 @@ class Processor():
         updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
 
         if write:
-            os.mkdir(f"{self.where}/output")
             updated_points.to_file(f"{self.where}/output/updated.shp")
             snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
             snap_df = pd.DataFrame({"geom": snap_lines})
@@ -210,11 +210,14 @@ class Processor():
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
             self.demand_nodes = defaultdict(int, {v:self.demand_nodes[flip_look_up[k]] for k, v in self.convert_ids.items()})
 
-        demand_not_on_graph = [True for k in self.demand_nodes if not self.look_up.get(k, False)]
+        demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
-    def graph_to_geom(self):
-        pass
+    def graph_to_geom(self, s_edges):
+        edge_keys = list(self.edges)
+        s_frame = pd.DataFrame([[i, edge_to_geom[edge_keys[s]]] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
+        s_frame['geom'] = s_frame.geom.apply(wkt.loads)
+        self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
         with open('demand_nodes.pickle', 'rb') as handle:

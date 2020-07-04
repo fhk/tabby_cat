@@ -11,6 +11,7 @@ from tabby_cat.solver import PCSTSolver
 def main():
     logging.basicConfig(filename='log.log',level=logging.DEBUG)
     where = "Vermont"
+    os.mkdir(f"{self.where}/output")
     logging.info(f"Running on {where}")
     logging.info("Started DataLoader")
     dl = DataLoader()
@@ -25,7 +26,6 @@ def main():
         dl.download_data_openaddress(where)
         logging.info("Reading address data")
         dl.read_address_data(where)
-        #dl.address_df.to_file("address.shp")
 
     logging.info("Starting processing")
     pr = Processor(where)
@@ -33,13 +33,17 @@ def main():
     pr.snap_points_to_line(dl.streets_df, dl.address_df)
     logging.info("Converting GIS to graph")
     pr.geom_to_graph()
+    logging.info("Writing intermediate files")
+    pr.store_intermediate()
 
     logging.info("Create solver")
     sl = PCSTSolver(pr.edges, pr.look_up, pr.demand_nodes)
     logging.info("Running solve")
     sl.solve()
 
-    import pdb; pdb.set_trace()
+    pr.graph_to_geom(sl.s_edges)
+
+    pr.solution.to_crs("epsg:4326").to_file(f"{where}/output/solution.shp")
 
 if __name__ == "__main__":
     main()
