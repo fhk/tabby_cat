@@ -150,7 +150,7 @@ class Processor():
 
     def get_demand_nodes(self, geometry):
         coords = geometry.coords[0]
-        coord_string = f'[{coords[0]:.1f}, {coords[1]:.1f}]'
+        coord_string = f'[{coords[0]:.0f}, {coords[1]:.0f}]'
         self.demand_nodes[coord_string] = 1
 
     def set_node_ids(self, geometry):
