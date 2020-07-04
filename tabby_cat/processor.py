@@ -215,7 +215,7 @@ class Processor():
 
     def graph_to_geom(self, s_edges):
         edge_keys = list(self.edges)
-        s_frame = pd.DataFrame([[i, edge_to_geom[edge_keys[s]]] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
+        s_frame = pd.DataFrame([[i, self.edge_to_geom[edge_keys[s]]] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
         s_frame['geom'] = s_frame.geom.apply(wkt.loads)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
