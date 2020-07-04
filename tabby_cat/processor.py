@@ -199,12 +199,12 @@ class Processor():
         if geom.geom_type == "LineString":
             coords = geom.coords[:]
             for i in range(len(coords) - 1):
-                new_lines.append([coords[i], [coords[i + 1]]])
+                new_lines.append([coords[i], coords[i + 1]])
         else:
             for sub_geom in geom:
                 coords = sub_geom.coords[:]
                 for i in range(len(coords) - 1):
-                    new_lines.append([coords[i], [coords[i + 1]]])
+                    new_lines.append([coords[i], coords[i + 1]])
         if len(new_lines) > 1:
             return MultiLineString(new_lines)
         else:
