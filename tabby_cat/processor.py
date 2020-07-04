@@ -13,7 +13,7 @@ import multiprocessing as mp
 import networkx as nx
 from shapely import wkt
 from shapely.ops import split
-from shapely.geometry import LineString, MultiPoint
+from shapely.geometry import LineString, MultiPoint, MultiLineString
 from pyproj import Proj, transform
 
 class Processor():
@@ -160,13 +160,13 @@ class Processor():
             coords = geometry.coords[:]
             s = coords[0]
             e = coords[-1]
-            s_coord_string = f'[{s[0]:.1f}, {s[1]:.1f}]'
+            s_coord_string = f'[{s[0]:.0f}, {s[1]:.0f}]'
             start = self.look_up.get(s_coord_string, None)
             if start is None:
                 self.look_up[s_coord_string] = self.index
                 start = self.index
                 self.index += 1
-            e_coord_string = f'[{e[0]:.1f}, {e[1]:.1f}]'
+            e_coord_string = f'[{e[0]:.0f}, {e[1]:.0f}]'
             end = self.look_up.get(e_coord_string, None)
             if end is None:
                 self.look_up[e_coord_string] = self.index
@@ -179,13 +179,13 @@ class Processor():
                 coords = line.coords[:]
                 s = coords[0]
                 e = coords[-1]
-                s_coord_string = f'[{s[0]:.1f}, {s[1]:.1f}]'
+                s_coord_string = f'[{s[0]:.0f}, {s[1]:.0f}]'
                 start = self.look_up.get(s_coord_string, None)
                 if start is None:
                     self.look_up[s_coord_string] = self.index
                     start = self.index
                     self.index += 1
-                e_coord_string = f'[{e[0]:.1f}, {e[1]:.1f}]'
+                e_coord_string = f'[{e[0]:.0f}, {e[1]:.0f}]'
                 end = self.look_up.get(e_coord_string, None)
                 if end is None:
                     self.look_up[e_coord_string] = self.index
@@ -194,8 +194,26 @@ class Processor():
                 self.edges[(start, end)] = line.length
                 self.edge_to_geom[(start, end)] = line.wkt
 
+    def expand_lines(self, geom):
+        new_lines = []
+        if geom.geom_type == "LineString":
+            coords = geom.coords[:]
+            for i in range(len(coords) - 1):
+                new_lines.append([coords[i], [coords[i + 1]]])
+        else:
+            for sub_geom in geom:
+                coords = sub_geom.coords[:]
+                for i in range(len(coords) - 1):
+                    new_lines.append([coords[i], [coords[i + 1]]])
+        if len(new_lines) > 1:
+            return MultiLineString(new_lines)
+        else:
+            return LineString(new_lines[0])
+
     def geom_to_graph(self):
         if not self.edges:
+            self.cut_lines.geometry = self.cut_lines.geometry.apply(lambda x: self.expand_lines(x))
+            self.lines.geometry = self.lines.geometry.apply(lambda x: self.expand_lines(x))
             self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
             self.lines.geometry.apply(lambda x: self.set_node_ids(x))
 
