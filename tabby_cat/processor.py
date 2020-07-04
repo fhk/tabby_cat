@@ -106,7 +106,7 @@ class Processor():
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
         """
         # this creates and also provides us access to the spatial index
-        if os.path.isfile("edge_to_geom.pickle"):
+        if os.path.isfile(f'{where}/output/edge_to_geom.pickle'):
             self.load_intermediate()
             self.loaded = True
             return
@@ -220,33 +220,33 @@ class Processor():
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
-        with open('demand_nodes.pickle', 'rb') as handle:
+        with open(f'{where}/output/demand_nodes.pickle', 'rb') as handle:
             self.demand_nodes = pickle.load(handle)
 
-        with open('look_up.pickle', 'rb') as handle:
+        with open(f'{where}/output/look_up.pickle', 'rb') as handle:
             self.look_up = pickle.load(handle)
 
-        with open('edges.pickle', 'rb') as handle:
+        with open(f'{where}/output/edges.pickle', 'rb') as handle:
             self.edges = pickle.load(handle)
 
-        with open('edge_to_geom.pickle', 'rb') as handle:
+        with open(f'{where}/output/edge_to_geom.pickle', 'rb') as handle:
             self.edge_to_geom = pickle.load(handle)
 
-        # with open('convert_ids.pickle', 'rb') as handle:
-        #     self.convert_ids = pickle.load(handle)
+        with open(f'{where}/output/convert_ids.pickle', 'rb') as handle:
+            self.convert_ids = pickle.load(handle)
 
     def store_intermediate(self):
-        with open('demand_nodes.pickle', 'wb') as handle:
+        with open(f'{where}/output/demand_nodes.pickle', 'wb') as handle:
             pickle.dump(self.demand_nodes, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open('look_up.pickle', 'wb') as handle:
+        with open(f'{where}/output/look_up.pickle', 'wb') as handle:
             pickle.dump(self.look_up, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open('edges.pickle', 'wb') as handle:
+        with open(f'{where}/output/edges.pickle', 'wb') as handle:
             pickle.dump(self.edges, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open('edge_to_geom.pickle', 'wb') as handle:
+        with open(f'{where}/output/edge_to_geom.pickle', 'wb') as handle:
             pickle.dump(self.edge_to_geom, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open('convert_ids.pickle', 'wb') as handle:
+        with open(f'{where}/output/convert_ids.pickle', 'wb') as handle:
             pickle.dump(self.convert_ids, handle, protocol=pickle.HIGHEST_PROTOCOL)

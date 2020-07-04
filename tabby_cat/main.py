@@ -11,7 +11,8 @@ from tabby_cat.solver import PCSTSolver
 def main():
     logging.basicConfig(filename='log.log',level=logging.DEBUG)
     where = "Vermont"
-    os.mkdir(f"{where}/output")
+    if not os.path.isdir(f"{where}/output"):
+        os.mkdir(f"{where}/output")
     logging.info(f"Running on {where}")
     logging.info("Started DataLoader")
     dl = DataLoader()
