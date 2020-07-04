@@ -220,33 +220,33 @@ class Processor():
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
-        with open(f'{where}/output/demand_nodes.pickle', 'rb') as handle:
+        with open(f'{self.where}/output/demand_nodes.pickle', 'rb') as handle:
             self.demand_nodes = pickle.load(handle)
 
-        with open(f'{where}/output/look_up.pickle', 'rb') as handle:
+        with open(f'{self.where}/output/look_up.pickle', 'rb') as handle:
             self.look_up = pickle.load(handle)
 
-        with open(f'{where}/output/edges.pickle', 'rb') as handle:
+        with open(f'{self.where}/output/edges.pickle', 'rb') as handle:
             self.edges = pickle.load(handle)
 
-        with open(f'{where}/output/edge_to_geom.pickle', 'rb') as handle:
+        with open(f'{self.where}/output/edge_to_geom.pickle', 'rb') as handle:
             self.edge_to_geom = pickle.load(handle)
 
-        with open(f'{where}/output/convert_ids.pickle', 'rb') as handle:
+        with open(f'{self.where}/output/convert_ids.pickle', 'rb') as handle:
             self.convert_ids = pickle.load(handle)
 
     def store_intermediate(self):
-        with open(f'{where}/output/demand_nodes.pickle', 'wb') as handle:
+        with open(f'{self.where}/output/demand_nodes.pickle', 'wb') as handle:
             pickle.dump(self.demand_nodes, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(f'{where}/output/look_up.pickle', 'wb') as handle:
+        with open(f'{self.where}/output/look_up.pickle', 'wb') as handle:
             pickle.dump(self.look_up, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(f'{where}/output/edges.pickle', 'wb') as handle:
+        with open(f'{self.where}/output/edges.pickle', 'wb') as handle:
             pickle.dump(self.edges, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(f'{where}/output/edge_to_geom.pickle', 'wb') as handle:
+        with open(f'{self.where}/output/edge_to_geom.pickle', 'wb') as handle:
             pickle.dump(self.edge_to_geom, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(f'{where}/output/convert_ids.pickle', 'wb') as handle:
+        with open(f'{self.where}/output/convert_ids.pickle', 'wb') as handle:
             pickle.dump(self.convert_ids, handle, protocol=pickle.HIGHEST_PROTOCOL)
