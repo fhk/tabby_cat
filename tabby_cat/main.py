@@ -17,7 +17,7 @@ def main():
     logging.info("Started DataLoader")
     dl = DataLoader()
 
-    if not os.path.isfile("edge_to_geom.pickle"):
+    if not os.path.isfile("{where}/output/edge_to_geom.pickle"):
 
         logging.info("Getting data from geofabrik")
         dl.download_data_geofabrik(where)
