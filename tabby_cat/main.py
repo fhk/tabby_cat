@@ -3,6 +3,7 @@ Main entry point for tabby cat
 """
 import os
 import logging
+import sys
 
 from tabby_cat.data_loader import DataLoader
 from tabby_cat.processor import Processor
@@ -10,23 +11,19 @@ from tabby_cat.solver import PCSTSolver
 
 def main():
     logging.basicConfig(filename='log.log',level=logging.DEBUG)
-    where = "Vermont"
-    if not os.path.isdir(f"{where}/output"):
-        os.mkdir(f"{where}/output")
+    where = sys.argv[1]
     logging.info(f"Running on {where}")
     logging.info("Started DataLoader")
     dl = DataLoader()
 
-    if not os.path.isfile("{where}/output/edge_to_geom.pickle"):
-
-        logging.info("Getting data from geofabrik")
-        dl.download_data_geofabrik(where)
-        logging.info("Reading street data")
-        dl.read_street_data(where)
-        logging.info("Getting data from openaddress") 
-        dl.download_data_openaddress(where)
-        logging.info("Reading address data")
-        dl.read_address_data(where)
+    logging.info("Getting data from geofabrik")
+    dl.download_data_geofabrik(where)
+    logging.info("Reading street data")
+    dl.read_street_data(where)
+    logging.info("Getting data from openaddress") 
+    dl.download_data_openaddress(where)
+    logging.info("Reading address data")
+    dl.read_address_data(where)
 
     logging.info("Starting processing")
     pr = Processor(where)
