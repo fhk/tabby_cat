@@ -142,10 +142,8 @@ class DataLoader():
                                 output.write(chunk)
                     files += 1
 
-
-
     def read_csv(self, file_name):
-        return pd.read_csv(file_name, usecols=self.data_cols)
+        return pd.read_csv(file_name)
 
     def read_shp(self, file_name):
         return gpd.read_file(file_name)
@@ -179,7 +177,7 @@ class DataLoader():
                     df.drop(['OA:x', 'OA:y'], axis=1),
                         crs={'init': 'epsg:4326'},
                         geometry=[Point(xy) for xy in zip(df['OA:x'], df['OA:y'])])
-            if file_name[-3:] == 'shp':
+            elif file_name[-3:] == 'shp':
                 gdf = gpd.read_file(file_name)
                 gdf = gdf.to_crs("epsg:4326")
             if self.address_df is None:
