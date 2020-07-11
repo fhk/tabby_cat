@@ -171,6 +171,9 @@ class DataLoader():
                 if 'X' in df.columns:
                     df['OA:x'] = df['X']
                     df['OA:y'] = df['Y']
+                if 'XCoord' in df.columns:
+                    df['OA:x'] = df['XCoord']
+                    df['OA:y'] = df['YCoord']
 
                 gdf = gpd.GeoDataFrame(
                     df.drop(['OA:x', 'OA:y'], axis=1),
