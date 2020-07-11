@@ -137,6 +137,8 @@ class Processor():
         updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
 
         if write:
+            if not os.path.isdir(f"{self.where}/output"):
+                os.mkdir(f"{self.where}/output")
             updated_points.to_file(f"{self.where}/output/updated.shp")
             snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
             snap_df = pd.DataFrame({"geom": snap_lines})
