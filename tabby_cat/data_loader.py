@@ -114,8 +114,8 @@ class DataLoader():
         zips = 0
         state_region = 'statewide'
 
-        if not os.path.isdir(self.region):
-            os.mkdir(self.region)
+        if not os.path.isdir(region):
+            os.mkdir(region)
 
         if region in ["Texas", "Mississippi"]:
             state_region  = "statewide-partial"
