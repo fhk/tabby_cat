@@ -3,6 +3,16 @@
 
 Part of the [broadband.cat](http://broadband.cat) open source broadband modellin suite.
 
+# Run this
+
+```
+git clone https://github.com/fhk/tabby_cat
+conda create -n tabby_cat python=3.7
+conda activate tabby_cat
+conda install geopandas
+pip install -r requirements.txt
+python tabby_cat/main.py "State"
+```
 
 ## DataLoader
 
