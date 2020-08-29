@@ -85,7 +85,7 @@ class DataLoader():
         pass
 
     def download_data_geofabrik(self, region, url_location=None, index=0):
-        if not os.path.isdir(region):
+        if not os.path.isdir(f"{region}_{index}"):
             location = region.lower().replace(" ", "-")
             if url_location is not None:
                 location = url_location
@@ -115,7 +115,8 @@ class DataLoader():
         state_region = 'statewide'
         if region in ["Texas", "Mississippi"]:
             state_region  = "statewide-partial"
-        statewide = [l for l in links if l.text[:15] == f"us/{self.known_regions[region]}/{state_region}"]
+        url_link_region = f"us/{self.known_regions[region]}/{state_region}"
+        statewide = [l for l in links if l.text[:len(url_link_region)] == url_link_region]
         if statewide:
             links = statewide
         for l in links:
