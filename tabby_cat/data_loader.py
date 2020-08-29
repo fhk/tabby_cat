@@ -112,7 +112,10 @@ class DataLoader():
         links = soup.find_all('a', href=True)
         files = 0
         zips = 0
-        statewide = [l for l in links if l.text[:15] == f"us/{self.known_regions[region]}/statewide"]
+        state_region = 'statewide'
+        if region in ["Texas", "Mississippi"]:
+            state_region  = "statewide-partial"
+        statewide = [l for l in links if l.text[:15] == f"us/{self.known_regions[region]}/{state_region}"]
         if statewide:
             links = statewide
         for l in links:

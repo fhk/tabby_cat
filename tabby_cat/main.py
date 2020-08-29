@@ -21,7 +21,6 @@ def main():
     logging.info("Reading street data")
     dl.read_street_data(where)
     logging.info("Getting data from openaddress")
-    1/0
     dl.download_data_openaddress(where)
     logging.info("Reading address data")
     dl.read_address_data(where)
