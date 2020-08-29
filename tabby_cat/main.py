@@ -20,7 +20,8 @@ def main():
     dl.download_data_geofabrik(where)
     logging.info("Reading street data")
     dl.read_street_data(where)
-    logging.info("Getting data from openaddress") 
+    logging.info("Getting data from openaddress")
+    1/0
     dl.download_data_openaddress(where)
     logging.info("Reading address data")
     dl.read_address_data(where)
@@ -44,4 +45,5 @@ def main():
     pr.solution.to_crs("epsg:4326").to_file(f"{where}/output/solution.shp")
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

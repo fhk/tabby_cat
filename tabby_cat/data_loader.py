@@ -67,7 +67,7 @@ class DataLoader():
         "Wyoming": "wy",
     }
 
-    californias = ["norcal", "socal"]
+    californias = ["california/norcal", "california/socal"]
     geofabrik_url = "http://download.geofabrik.de/north-america/us/"
     geofabrik_ending_url_string = "-latest-free.shp.zip"
     street_file_name = "gis_osm_roads_free_1.shp"
@@ -84,20 +84,24 @@ class DataLoader():
     def __init__(self):
         pass
 
-    def download_data_geofabrik(self, region):
+    def download_data_geofabrik(self, region, url_location=None, index=0):
         if not os.path.isdir(region):
-            if region is "California":
-                for cal in californias:
-                    download_data_geofabrik(cal)
             location = region.lower().replace(" ", "-")
+            if url_location is not None:
+                location = url_location
+            if region == "California" and url_location is None:
+                for i, cal in enumerate(self.californias):
+                    self.download_data_geofabrik(region, cal, i)
+                return region
             full_url = f"{self.geofabrik_url}{location}{self.geofabrik_ending_url_string}"
-            page = requests.get(full_url, stream=True)
-            with open(f"{region}.zip", "wb") as fd:
-                for chunk in page.iter_content(chunk_size=128):
-                    fd.write(chunk)
+            if not os.path.exists(f"{region}_{index}.zip"):
+                page = requests.get(full_url, stream=True)
+                with open(f"{region}_{index}.zip", "wb") as fd:
+                    for chunk in page.iter_content(chunk_size=128):
+                        fd.write(chunk)
 
-            with zipfile.ZipFile(f"{region}.zip", 'r') as zip_ref:
-                zip_ref.extractall(f"{region}")
+            with zipfile.ZipFile(f"{region}_{index}.zip", 'r') as zip_ref:
+                zip_ref.extractall(f"{region}_{index}")
         
         return region
 
@@ -149,7 +153,12 @@ class DataLoader():
         return gpd.read_file(file_name)
 
     def read_street_data(self, region):
-        streets = self.read_shp(f"./{region}/{self.street_file_name}")
+        if region == 'California':
+            streets_1 = self.read_shp(f"./{region}_0/{self.street_file_name}")
+            streets_2 = self.read_shp(f"./{region}_1/{self.street_file_name}")
+            streets = streets_1.append(streets_2)
+        else:
+            streets = self.read_shp(f"./{region}/{self.street_file_name}")
         self.streets_df = streets[streets['fclass'].isin([
             "residential",
             "primary",

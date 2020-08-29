@@ -4,20 +4,14 @@ import csv
 
 import geopandas as gpd
 
-
 def main():
     data = gpd.read_file(sys.argv[1])
-    data_m = data.to_crs(epsg='2163')
-
-    with open("converted.csv", 'w') as convert:
-        writer = csv.writer(convert)
-
-        for row in data_m[data['geometry'].geom_type == 'LineString'].iterrows():
-            writer.writerow([row[-1][1].wkt])
-
-
-
-
+    data['lat'] = data.geometry.apply(lambda x: x.centroid.coords[0][0])
+    data['lon'] = data.geometry.apply(lambda x: x.centroid.coords[0][1])
+    data = data.to_crs('epsg:2163')
+    data['length'] = data.geometry.apply(lambda x: x.length)
+    data = data.to_crs('epsg:4326')
+    data.to_csv("network.csv")
 
 if __name__ == "__main__":
     main()
