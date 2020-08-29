@@ -161,7 +161,7 @@ class DataLoader():
             streets_2 = self.read_shp(f"./{region}_1/{self.street_file_name}")
             streets = streets_1.append(streets_2)
         else:
-            streets = self.read_shp(f"./{region}/{self.street_file_name}")
+            streets = self.read_shp(f"./{region}_0/{self.street_file_name}")
         self.streets_df = streets[streets['fclass'].isin([
             "residential",
             "primary",
