@@ -113,6 +113,10 @@ class DataLoader():
         files = 0
         zips = 0
         state_region = 'statewide'
+
+        if not os.path.isdir(self.region):
+            os.mkdir(self.region)
+
         if region in ["Texas", "Mississippi"]:
             state_region  = "statewide-partial"
         url_link_region = f"us/{self.known_regions[region]}/{state_region}"
