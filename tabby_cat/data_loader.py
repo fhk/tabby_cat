@@ -3,6 +3,7 @@ The place where the data comes from!
 """
 import os
 import zipfile
+import time
 
 import requests
 from bs4 import BeautifulSoup
@@ -123,10 +124,10 @@ class DataLoader():
         statewide = [l for l in links if l.attrs.get("href")[-len(url_link_region):] == url_link_region]
         if statewide:
             links = statewide
+        time.sleep(5)
         for l in links:
             what_region_url = f"us{self.known_regions[region]}"
             link = l.attrs.get("href")
-
             if "".join(link.split('/')[-3:][:2]) == what_region_url:
                 if link[-3:] == "zip":
                     data = requests.get(link, stream=True)
