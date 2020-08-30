@@ -36,7 +36,7 @@ class Processor():
         """
         Concept taken from here: https://swanlund.space/parallelizing-python
         """
-        cpus = mp.cpu_count()
+        cpus = 4 # mp.cpu_count()
         
         intersection_chunks = np.array_split(points, cpus)
         
@@ -128,7 +128,7 @@ class Processor():
             closest[line_columns], geometry=new_pts, crs="epsg:3857")
         closest['snapped'] = snapped.geometry
         split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
-        split_lines_df = pd.DataFrame({"geom": split_lines})
+        split_lines_df = pd.DataFrame({"geom": split_lines}, index=[i for i in range(len(split_lines))])
         self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
  
         # Join back to the original points:
@@ -141,9 +141,10 @@ class Processor():
                 os.mkdir(f"{self.where}/output")
             updated_points.to_file(f"{self.where}/output/updated.shp")
             snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
-            snap_df = pd.DataFrame({"geom": snap_lines})
+            snap_df = pd.DataFrame({"geom": snap_lines}, index=[i for i in range(len(snap_lines))])
             snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
-            snap_gdf['length'] = snap_gdf.geometry.apply(lambda x: x.length)
+            snap_gdf = snap_gdf.dropna()
+            snap_gdf['length'] = snap_gdf.apply(lambda x: x.geom.length, axis=1)
             snap_gdf = snap_gdf.to_crs('epsg:4326')
             snap_gdf['lat'] = snap_gdf.geometry.apply(lambda x: x.coords[0][0])
             snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
@@ -214,6 +215,7 @@ class Processor():
 
     def geom_to_graph(self):
         if not self.edges:
+            self.cut_lines = self.cut_lines.dropna()
             self.cut_lines.geometry = self.cut_lines.geometry.apply(lambda x: self.expand_lines(x))
             self.lines.geometry = self.lines.geometry.apply(lambda x: self.expand_lines(x))
             self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
