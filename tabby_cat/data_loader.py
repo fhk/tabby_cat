@@ -182,7 +182,7 @@ class DataLoader():
         for file_name in self.add_files:
             if file_name[-3:] == 'csv':
                 df = self.read_csv(file_name)
-
+                df = df[(df.LON >= -180) & (df.LON <= 180) & (df.LAT >= -90) & (df.LAT <= 90)]
                 gdf = gpd.GeoDataFrame(
                         df,
                         crs={'init': 'epsg:4326'},
