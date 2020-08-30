@@ -119,13 +119,15 @@ class DataLoader():
 
         if region in ["Texas", "Mississippi"]:
             state_region  = "statewide-partial"
-        url_link_region = f"us/{self.known_regions[region]}/{state_region}"
-        statewide = [l for l in links if l.text[:len(url_link_region)] == url_link_region]
+        url_link_region = f"us/{self.known_regions[region]}/{state_region}.zip"
+        statewide = [l for l in links if l.attrs.get("href")[-len(url_link_region):] == url_link_region]
         if statewide:
             links = statewide
         for l in links:
-            if l.text[:5] == f"us/{self.known_regions[region]}":
-                link = l.attrs.get("href")
+            what_region_url = f"us{self.known_regions[region]}"
+            link = l.attrs.get("href")
+
+            if "".join(link.split('/')[-3:][:2]) == what_region_url:
                 if link[-3:] == "zip":
                     data = requests.get(link, stream=True)
                     full_file_name = f"./{region}/{self.known_regions[region]}_{zips}.zip"
@@ -138,10 +140,7 @@ class DataLoader():
                         extracted = zip_ref.namelist()
                         zip_ref.extractall(f"{region}/{zips}")
                         for e in extracted:
-                            if e[-3:] == "shp":
-                                self.add_files.append(f"{region}/{zips}/{e}")
-
-                            if e[-3] == "csv":
+                            if e[-3:] == 'csv':
                                 self.add_files.append(f"{region}/{zips}/{e}")
 
                 if link[-3:] == "csv":
@@ -183,17 +182,11 @@ class DataLoader():
         for file_name in self.add_files:
             if file_name[-3:] == 'csv':
                 df = self.read_csv(file_name)
-                if 'X' in df.columns:
-                    df['OA:x'] = df['X']
-                    df['OA:y'] = df['Y']
-                if 'XCoord' in df.columns:
-                    df['OA:x'] = df['XCoord']
-                    df['OA:y'] = df['YCoord']
 
                 gdf = gpd.GeoDataFrame(
-                    df.drop(['OA:x', 'OA:y'], axis=1),
+                        df,
                         crs={'init': 'epsg:4326'},
-                        geometry=[Point(xy) for xy in zip(df['OA:x'], df['OA:y'])])
+                        geometry=[Point(xy) for xy in zip(df['LON'], df['LAT'])])
             elif file_name[-3:] == 'shp':
                 gdf = gpd.read_file(file_name)
                 gdf = gdf.to_crs("epsg:4326")
