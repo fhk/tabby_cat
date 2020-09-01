@@ -24,6 +24,7 @@ class DataLoader():
         "Colorado": "co",
         "Connecticut": "ct",
         "Delaware": "de",
+        "District of Columbia": 'dc',
         "Florida": "fl",
         "Georgia": "ga",
         "Hawaii": "hi",
@@ -78,6 +79,8 @@ class DataLoader():
     where = []
     add_files = []
     data_cols = ['OA:x', 'OA:y']
+
+    microsoft_buildings_url = "https://usbuildingdata.blob.core.windows.net/usbuildings-v1-1/"
 
     streets_df = None
     address_df = None
@@ -154,10 +157,32 @@ class DataLoader():
                                 output.write(chunk)
                     files += 1
 
+    def download_data_microsoft_buildings(self, region):
+        if not os.path.exists(f"{region}/{region}.geojson"):
+            location = region.replace(" ", "")
+            full_url = f"{self.microsoft_buildings_url}{location}.zip"
+            if not os.path.exists(f"{region}.zip"):
+                page = requests.get(full_url, stream=True)
+                with open(f"{region}.zip", "wb") as fd:
+                    for chunk in page.iter_content(chunk_size=128):
+                        fd.write(chunk)
+
+            with zipfile.ZipFile(f"{region}.zip", 'r') as zip_ref:
+                extracted = zip_ref.namelist()
+                zip_ref.extractall(f"{region}")
+                for e in extracted:
+                    if e[-4:] == 'json':
+                        self.add_files.append(f"{region}/{region}.geojson")
+        
+        return region
+
     def read_csv(self, file_name):
         return pd.read_csv(file_name)
 
     def read_shp(self, file_name):
+        return gpd.read_file(file_name)
+
+    def read_geojson(self, file_name):
         return gpd.read_file(file_name)
 
     def read_street_data(self, region):
@@ -191,6 +216,9 @@ class DataLoader():
             elif file_name[-3:] == 'shp':
                 gdf = gpd.read_file(file_name)
                 gdf = gdf.to_crs("epsg:4326")
+            elif file_name[-4:] == 'json':
+                gdf = gpd.read_file(file_name)
+                gdf.geometry = gdf.geometry.apply(lambda x: Point(x.centroid.coords[0]))
             if self.address_df is None:
                 self.address_df = gdf
             else:
