@@ -32,7 +32,7 @@ class Processor():
         self.edges = OrderedDict()
         self.index = 0
 
-    def _parallelize(self, points, lines):
+    def _parallelize(self, points, lines, demand_points=False):
         """
         Concept taken from here: https://swanlund.space/parallelizing-python
         """
@@ -42,7 +42,7 @@ class Processor():
         
         pool = mp.Pool(processes=cpus)
         
-        chunk_processes = [pool.apply_async(self._snap_part, args=(chunk, lines)) for chunk in intersection_chunks]
+        chunk_processes = [pool.apply_async(self._snap_part, args=(chunk, lines, demand_points)) for chunk in intersection_chunks]
 
         intersection_results = [chunk.get() for chunk in chunk_processes]
         
@@ -50,7 +50,7 @@ class Processor():
 
         return intersections_dist
 
-    def _snap_part(self, gdf_chunk, lines):
+    def _snap_part(self, gdf_chunk, lines, demand_points=False):
         offset = 1000
 
         bbox = gdf_chunk.bounds + [-offset, -offset, offset, offset]
@@ -78,6 +78,9 @@ class Processor():
         tmp = tmp.sort_values(by=["snap_dist"])
         # group by the index of the points and take the first, which is the
         # closest line
+        if demand_points:
+            return tmp[tmp.snap_dist <= 50]
+
         closest = tmp.groupby("pt_idx").first()
 
         # construct a GeoDataFrame of the closest lines
@@ -85,7 +88,7 @@ class Processor():
 
     def points_to_multipoint(self, data):
         coords = set()
-        for p in data.snapped:
+        for p in data.point:
             coords.add(p.coords[0])
             self.demand.add(p.coords[0])
 
@@ -115,6 +118,7 @@ class Processor():
         self.lines = lines
 
         closest = self._parallelize(points, lines)
+        self.closest_streets = closest
         # Position of nearest point from start of the line
         series = gpd.GeoSeries(closest.point)
         series.crs = {'init': 'epsg:3857'}
@@ -131,25 +135,25 @@ class Processor():
         split_lines_df = pd.DataFrame({"geom": split_lines}, index=[i for i in range(len(split_lines))])
         self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
  
-        # Join back to the original points:
-        updated_points = points.drop(columns=["geometry"]).join(snapped)
-        # You may want to drop any that didn't snap, if so: 
+        points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
+        updated_points = points.drop(columns="geometry").join(snapped)
         updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
 
+        self.snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
+        snap_df = pd.DataFrame({"geom": self.snap_lines}, index=[i for i in range(len(self.snap_lines))])
+        self.snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
+        self.snap_gdf = self.snap_gdf.dropna()
+        self.snap_gdf['length'] = self.snap_gdf.apply(lambda x: x.geom.length, axis=1)
+        
         if write:
             if not os.path.isdir(f"{self.where}/output"):
                 os.mkdir(f"{self.where}/output")
             updated_points.to_file(f"{self.where}/output/updated.shp")
-            snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
-            snap_df = pd.DataFrame({"geom": snap_lines}, index=[i for i in range(len(snap_lines))])
-            snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
-            snap_gdf = snap_gdf.dropna()
-            snap_gdf['length'] = snap_gdf.apply(lambda x: x.geom.length, axis=1)
-            snap_gdf = snap_gdf.to_crs('epsg:4326')
-            snap_gdf['lat'] = snap_gdf.geometry.apply(lambda x: x.coords[0][0])
-            snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
-            snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
-            snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
+            self.snap_gdf = self.snap_gdf.to_crs('epsg:4326')
+            self.snap_gdf['lat'] = self.snap_gdf.geometry.apply(lambda x: x.coords[0][0])
+            self.snap_gdf['lon'] = self.snap_gdf.geometry.apply(lambda x: x.coords[0][1])
+            self.snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
+            self.snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
 
     def get_demand_nodes(self, geometry):
         coords = geometry.coords[0]
@@ -213,6 +217,13 @@ class Processor():
         else:
             return LineString(new_lines[0])
 
+    def connect_demand_with_range(self, points):
+        points = points.to_crs('epsg:3857')
+        results = self._parallelize(points, points, demand_points=True)
+        results = results[results.pt_idx.isin(self.closest_streets[self.closest_streets.snap_dist > 50].index)]
+        results = results[results.snap_dist > 0]
+        self.connected_demand = results.apply(lambda x: LineString([x.geometry.coords[0], x.point.coords[0]]), axis=1)
+
     def geom_to_graph(self):
         if not self.edges:
             self.cut_lines = self.cut_lines.dropna()
@@ -220,6 +231,8 @@ class Processor():
             self.lines.geometry = self.lines.geometry.apply(lambda x: self.expand_lines(x))
             self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
             self.lines.geometry.apply(lambda x: self.set_node_ids(x))
+            self.snap_gdf.geometry.apply(lambda x: self.set_node_ids(x))
+            self.connected_demand.apply(lambda x: self.set_node_ids(x))
 
             g = nx.Graph()
             g.add_edges_from(self.edges)

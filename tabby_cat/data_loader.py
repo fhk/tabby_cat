@@ -172,7 +172,7 @@ class DataLoader():
                 zip_ref.extractall(f"{region}")
                 for e in extracted:
                     if e[-4:] == 'json':
-                        self.add_files.append(f"{region}/{region}.geojson")
+                        self.add_files.append(f"{region}/{region.replace(' ', '')}.geojson")
         
         return region
 
@@ -192,6 +192,10 @@ class DataLoader():
             streets = streets_1.append(streets_2)
         else:
             streets = self.read_shp(f"./{region}_0/{self.street_file_name}")
+        
+        fb_streets = self.read_geojson(f"./{region}_0/fb_streets.geojson")
+        fb_streets['fclass'] = 'residential'
+        streets = streets.append(fb_streets)
         self.streets_df = streets[streets['fclass'].isin([
             "residential",
             "primary",
@@ -218,6 +222,11 @@ class DataLoader():
                 gdf = gdf.to_crs("epsg:4326")
             elif file_name[-4:] == 'json':
                 gdf = gpd.read_file(file_name)
+                #gdf = gdf.to_crs('epsg:3857')
+                #bounding_box = gdf.envelope
+                #buff_box = bounding_box.buffer(6)
+                #u_box = pd.DataFrame({"geom": [p.centroid for p in buff_box.unary_union]})
+                #points_df = gpd.GeoDataFrame(u_box, geometry='geom', crs='epsg:3857')
                 gdf.geometry = gdf.geometry.apply(lambda x: Point(x.centroid.coords[0]))
             if self.address_df is None:
                 self.address_df = gdf
