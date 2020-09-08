@@ -221,8 +221,8 @@ class Processor():
         points = points.to_crs('epsg:3857')
         results = self._parallelize(points, points, demand_points=True)
         results = results[results.pt_idx.isin(self.closest_streets[self.closest_streets.snap_dist > 50].index)]
-        import pdb; pdb.set_trace()
-
+        results = results[results.snap_dist > 0]
+        self.connected_demand = results.apply(lambda x: LineString([x.geometry.coords[0], x.point.coords[0]]), axis=1)
 
     def geom_to_graph(self):
         if not self.edges:
