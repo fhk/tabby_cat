@@ -219,7 +219,7 @@ class Processor():
         for n in self.g.nodes():
             if self.g.degree(n) == 1:
                 node = self.flip_look_up[n]
-                path = nx.single_source_shortest_path(self.g, d, 10)
+                path = nx.single_source_shortest_path(self.g, n, 10)
                 for next_node in list(path.keys())[2:]:
                     nn_coord = self.flip_look_up[next_node]
                     line = LineString([eval(node), eval(nn_coord)])
