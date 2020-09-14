@@ -217,14 +217,14 @@ class Processor():
     def add_inter_demand_connections(self):
         demand_links = OrderedDict()
         for n in self.g.nodes():
-            if self.g.degree(d) == 1:
-                node = self.flip_look_up[c_d]
+            if self.g.degree(n) == 1:
+                node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, d, 10)
                 for next_node in list(path.keys())[2:]:
                     nn_coord = self.flip_look_up[next_node]
                     line = LineString([eval(node), eval(nn_coord)])
                     self.edge_to_geom[d, next_node] = line.wkt
-                    demand_links[d, next_node] = line.length
+                    demand_links[n, next_node] = line.length
 
         return demand_links
 
