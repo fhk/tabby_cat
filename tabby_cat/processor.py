@@ -16,6 +16,7 @@ from shapely.ops import split
 from shapely.geometry import LineString, MultiPoint, MultiLineString
 from pyproj import Proj, transform
 
+
 class Processor():
     def __init__(self, where):
         self.where = where
@@ -135,17 +136,17 @@ class Processor():
         updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
         updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
-
+        points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
+        self.snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
+        self.snap_lines = pd.DataFrame({"geom": self.snap_lines}, index=[i for i in range(len(self.snap_lines))])
+        self.snap_lines = gpd.GeoDataFrame(self.snap_lines, geometry="geom", crs="epsg:3857")
+        self.snap_lines = self.snap_lines.dropna()
+        self.snap_lines['length'] = self.snap_lines.apply(lambda x: x.geom.length, axis=1)
         if write:
             if not os.path.isdir(f"{self.where}/output"):
                 os.mkdir(f"{self.where}/output")
             updated_points.to_file(f"{self.where}/output/updated.shp")
-            snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
-            snap_df = pd.DataFrame({"geom": snap_lines}, index=[i for i in range(len(snap_lines))])
-            snap_gdf = gpd.GeoDataFrame(snap_df, geometry="geom", crs="epsg:3857")
-            snap_gdf = snap_gdf.dropna()
-            snap_gdf['length'] = snap_gdf.apply(lambda x: x.geom.length, axis=1)
-            snap_gdf = snap_gdf.to_crs('epsg:4326')
+            snap_gdf = self.snap_lines.to_crs('epsg:4326')
             snap_gdf['lat'] = snap_gdf.geometry.apply(lambda x: x.coords[0][0])
             snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
             snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
@@ -213,6 +214,20 @@ class Processor():
         else:
             return LineString(new_lines[0])
 
+    def add_inter_demand_connections(self):
+        demand_links = OrderedDict()
+        for d in self.demand_nodes:
+            if self.g.degree(d) == 1:
+                node = self.flip_look_up[self.convert_ids[d]]
+                path = nx.single_source_shortest_path(self.g, d, 10)
+                for next_node in list(path.keys())[2:]:
+                    nn_coord = self.flip_look_up[next_node]
+                    line = LineString([eval(node), eval(nn_coord)])
+                    self.edge_to_geom[self.convert_ids[d], self.convert_ids[next_node]] = line.wkt
+                    demand_links[self.convert_ids[d], self.convert_ids[next_node]] = line.length
+
+        return demand_links
+
     def geom_to_graph(self):
         if not self.edges:
             self.cut_lines = self.cut_lines.dropna()
@@ -220,18 +235,19 @@ class Processor():
             self.lines.geometry = self.lines.geometry.apply(lambda x: self.expand_lines(x))
             self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
             self.lines.geometry.apply(lambda x: self.set_node_ids(x))
+            self.snap_lines.geometry.apply(lambda x: self.set_node_ids(x))
 
-            g = nx.Graph()
-            g.add_edges_from(self.edges)
-            largest_cc = max(nx.connected_components(g), key=len)
+            self.g = nx.Graph()
+            self.g.add_edges_from(self.edges)
+            largest_cc = max(nx.connected_components(self.g), key=len)
 
-            flip_look_up = {v: k for k, v in self.look_up.items()}
+            self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
             self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
             self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
-            self.demand_nodes = defaultdict(int, {v:self.demand_nodes[flip_look_up[k]] for k, v in self.convert_ids.items()})
-
+            self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
+            self.edges = {**self.edges, **self.add_inter_demand_connections()}
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
@@ -248,6 +264,7 @@ class Processor():
 
         with open(f'{self.where}/output/look_up.pickle', 'rb') as handle:
             self.look_up = pickle.load(handle)
+            self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
         with open(f'{self.where}/output/edges.pickle', 'rb') as handle:
             self.edges = pickle.load(handle)
