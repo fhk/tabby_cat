@@ -218,13 +218,15 @@ class Processor():
         demand_links = OrderedDict()
         for d in self.demand_nodes:
             if self.g.degree(d) == 1:
-                node = self.flip_look_up[self.convert_ids[d]]
-                path = nx.single_source_shortest_path(self.g, d, 10)
-                for next_node in list(path.keys())[2:]:
-                    nn_coord = self.flip_look_up[next_node]
-                    line = LineString([eval(node), eval(nn_coord)])
-                    self.edge_to_geom[self.convert_ids[d], self.convert_ids[next_node]] = line.wkt
-                    demand_links[self.convert_ids[d], self.convert_ids[next_node]] = line.length
+                c_d = self.convert_ids.get(d, False)
+                if c_d:
+                    node = self.flip_look_up[c_d]
+                    path = nx.single_source_shortest_path(self.g, d, 10)
+                    for next_node in list(path.keys())[2:]:
+                        nn_coord = self.flip_look_up[next_node]
+                        line = LineString([eval(node), eval(nn_coord)])
+                        self.edge_to_geom[self.convert_ids[d], self.convert_ids[next_node]] = line.wkt
+                        demand_links[self.convert_ids[d], self.convert_ids[next_node]] = line.length
 
         return demand_links
 
