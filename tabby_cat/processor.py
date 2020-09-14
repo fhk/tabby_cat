@@ -219,14 +219,14 @@ class Processor():
         for d in self.demand_nodes:
             if self.g.degree(d) == 1:
                 c_d = self.convert_ids.get(d, False)
-                if c_d:
+                if c_d is not False:
                     node = self.flip_look_up[c_d]
                     path = nx.single_source_shortest_path(self.g, d, 10)
                     for next_node in list(path.keys())[2:]:
                         nn_coord = self.flip_look_up[next_node]
                         line = LineString([eval(node), eval(nn_coord)])
                         self.edge_to_geom[d, next_node] = line.wkt
-                        demand_links[self.convert_ids[d], self.convert_ids[next_node]] = line.length
+                        demand_links[d, next_node] = line.length
 
         return demand_links
 
@@ -242,14 +242,14 @@ class Processor():
             self.g = nx.Graph()
             self.g.add_edges_from(self.edges)
             largest_cc = max(nx.connected_components(self.g), key=len)
-
+            self.edges = {**self.edges, **self.add_inter_demand_connections()}
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
             self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
             self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
             self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
-            self.edges = {**self.edges, **self.add_inter_demand_connections()}
+
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
