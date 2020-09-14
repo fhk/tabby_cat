@@ -225,7 +225,7 @@ class Processor():
                     for next_node in list(path.keys())[2:]:
                         nn_coord = self.flip_look_up[next_node]
                         line = LineString([eval(node), eval(nn_coord)])
-                        self.edge_to_geom[self.convert_ids[d], self.convert_ids[next_node]] = line.wkt
+                        self.edge_to_geom[d, next_node] = line.wkt
                         demand_links[self.convert_ids[d], self.convert_ids[next_node]] = line.length
 
         return demand_links
