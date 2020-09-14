@@ -216,7 +216,7 @@ class Processor():
 
     def add_inter_demand_connections(self):
         demand_links = OrderedDict()
-        for d in self.demand_nodes:
+        for n in self.g.nodes():
             if self.g.degree(d) == 1:
                 node = self.flip_look_up[c_d]
                 path = nx.single_source_shortest_path(self.g, d, 10)
