@@ -221,12 +221,38 @@ class Processor():
                 node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
+
                     nn_coord = self.flip_look_up[next_node]
                     line = LineString([eval(node), eval(nn_coord)])
                     self.edge_to_geom[n, next_node] = line.wkt
-                    demand_links[n, next_node] = line.length * 2 # Increase cost to prefer drop
+                    cost = line.length
+                    if len(path) == 3:
+                        demand_links[n, next_node] = cost * 3 # Increase cost to prefer drop
+                    if len(path) == 4 and path[2]["length"] < 9:
+                        demand_links[n, next_node] = cost
+                    else:
+                        demand_links[n, next_node] = cost * 2
 
         return demand_links
+
+    def add_test_line_edges(self, test_lines):
+        test_lines = test_lines.to_crs("epsg:3857")
+        for line in test_lines.geometry:
+            demand, node = line.coords[:]
+            s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
+            self.demand_nodes[s_coord_string] = 1
+            e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
+            start = self.look_up.get(s_coord_string, None)
+            if start is None:
+                self.look_up[s_coord_string] = self.index
+                start = self.index
+                self.index += 1
+            end = self.look_up.get(e_coord_string, None)
+            if end is None:
+                self.look_up[e_coord_string] = self.index
+                end = self.index
+                self.index += 1
+            self.edges[(start, end)] = line.length
 
     def geom_to_graph(self):
         if not self.edges:

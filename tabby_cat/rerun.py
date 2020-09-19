@@ -5,6 +5,8 @@ import os
 import logging
 import sys
 
+import geopandas as gpd
+
 from tabby_cat.data_loader import DataLoader
 from tabby_cat.processor import Processor
 from tabby_cat.solver import PCSTSolver
@@ -15,12 +17,14 @@ def main():
 
     logging.info("Starting processing")
     pr = Processor(where)
+    test_lines = gpd.read_file(f"{where}/output/test_lines.shp")
+    pr.add_test_line_edges(test_lines)
     logging.info("Snapping addresses to streets")
     pr.snap_points_to_line(dl.streets_df, dl.address_df)
     logging.info("Converting GIS to graph")
     pr.geom_to_graph()
-    logging.info("Writing intermediate files")
-    pr.store_intermediate()
+    #logging.info("Writing intermediate files")
+    #pr.store_intermediate()
 
     logging.info("Create solver")
     sl = PCSTSolver(pr.edges, pr.look_up, pr.demand_nodes)
