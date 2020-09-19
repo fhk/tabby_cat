@@ -20,7 +20,8 @@ def main():
     test_lines = gpd.read_file(f"{where}/output/test_lines.shp")
     pr.add_test_line_edges(test_lines)
     logging.info("Snapping addresses to streets")
-    pr.snap_points_to_line(dl.streets_df, dl.address_df)
+    pr.load_intermediate()
+    pr.loaded = True
     logging.info("Converting GIS to graph")
     pr.geom_to_graph()
     #logging.info("Writing intermediate files")
