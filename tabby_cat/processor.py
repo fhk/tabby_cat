@@ -253,9 +253,10 @@ class Processor():
                 self.index += 1
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
+            self.edge_to_geom[start, end] = line.wkt
             self.edges[(start, end)] = line.length
 
-    def geom_to_graph(self):
+    def geom_to_graph(self, rerun=False):
         if not self.edges:
             self.cut_lines = self.cut_lines.dropna()
             self.cut_lines.geometry = self.cut_lines.geometry.apply(lambda x: self.expand_lines(x))
@@ -272,7 +273,8 @@ class Processor():
         self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
         self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
         self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
-        self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
+        if rerun is False:
+            self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
 
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")

@@ -23,7 +23,7 @@ def main():
     pr.load_intermediate()
     pr.loaded = True
     logging.info("Converting GIS to graph")
-    pr.geom_to_graph()
+    pr.geom_to_graph(rerun=True)
     #logging.info("Writing intermediate files")
     #pr.store_intermediate()
 
