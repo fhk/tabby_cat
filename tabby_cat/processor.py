@@ -228,7 +228,8 @@ class Processor():
                     cost = line.length
                     if len(path) == 3:
                         demand_links[n, next_node] = cost * 3 # Increase cost to prefer drop
-                    if len(path) == 4 and path[2]["length"] < 9:
+                    edge_mid = self.g.edge[list(path.values())[2][1:]]
+                    if len(path) == 4 and self.g.edge[edge_mid[0]][edge_mid[1]]["length"] < 9:
                         demand_links[n, next_node] = cost
                     else:
                         demand_links[n, next_node] = cost * 2
