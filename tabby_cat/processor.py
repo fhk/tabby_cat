@@ -258,7 +258,7 @@ class Processor():
                 self.index += 1
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
-            self.edge_to_geom[start, end] = line.wkt
+            self.edge_to_geom[(start, end)] = line.wkt
             self.edges[(start, end)] = line.length
 
     def geom_to_graph(self, rerun=False):
@@ -287,7 +287,8 @@ class Processor():
     def graph_to_geom(self, s_edges):
         edge_keys = list(self.edges)
         flip_node = {v:k for k, v in self.convert_ids.items()}
-        s_frame = pd.DataFrame([[i, self.edge_to_geom[flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]]] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
+        s_frame = pd.DataFrame([[i, self.edge_to_geom.get((flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]), None)] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
+        s_frame = s_frame.dropna()
         s_frame['geom'] = s_frame.geom.apply(wkt.loads)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
