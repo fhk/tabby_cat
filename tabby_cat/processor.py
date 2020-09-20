@@ -240,7 +240,6 @@ class Processor():
         for line in test_lines.geometry:
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
-            self.demand_nodes[s_coord_string] = 1
             e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
             start = self.look_up.get(s_coord_string, None)
             if start is None:
@@ -252,6 +251,8 @@ class Processor():
                 self.look_up[e_coord_string] = self.index
                 end = self.index
                 self.index += 1
+            self.demand_nodes[start] = 1
+            self.demand_nodes[end] = 1
             self.edges[(start, end)] = line.length
 
     def geom_to_graph(self):
@@ -290,6 +291,7 @@ class Processor():
         with open(f'{self.where}/output/look_up.pickle', 'rb') as handle:
             self.look_up = pickle.load(handle)
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
+            self.index = len(self.look_up) + 1
 
         with open(f'{self.where}/output/edges.pickle', 'rb') as handle:
             self.edges = pickle.load(handle)
