@@ -275,11 +275,11 @@ class Processor():
         largest_cc = max(nx.connected_components(self.g), key=len)
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
         self.edges = {**self.edges, **self.add_inter_demand_connections()}
-        self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
         self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
         self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
         if rerun is False:
             self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
+            self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
 
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
@@ -288,8 +288,6 @@ class Processor():
         edge_keys = list(self.edges)
         flip_node = {v:k for k, v in self.convert_ids.items()}
         s_frame = pd.DataFrame([[i, self.edge_to_geom.get((flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]), None)] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
-        s_frame_flipped = pd.DataFrame([[i, self.edge_to_geom.get((flip_node[edge_keys[s][1]], flip_node[edge_keys[s][0]]), None)] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
-        s_frame = s_frame.append(s_frame_flipped)
         s_frame = s_frame.dropna()
         s_frame['geom'] = s_frame.geom.apply(wkt.loads)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
