@@ -219,7 +219,7 @@ class Processor():
         demand_links = OrderedDict()
         max_convert_id = max(self.convert_ids.values())
         for n in self.g.nodes():
-            if self.g.degree(n) == 1 and in largest:
+            if self.g.degree(n) == 1 and n in largest:
                 if n not in self.convert_ids:
                     max_convert_id += 1
                     self.convert_ids[n] = max_convert_id
