@@ -251,12 +251,12 @@ class Processor():
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
             e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
-            start = self.look_up.get(s_coord_string, None)
+            start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
             if start is None:
                 self.look_up[s_coord_string] = self.index
                 start = self.index
                 self.index += 1
-            end = self.look_up.get(e_coord_string, None)
+            end = self.convert_ids.get(self.look_up.get(e_coord_string, None), None)
             if end is None:
                 self.look_up[e_coord_string] = self.index
                 end = self.index
@@ -277,10 +277,11 @@ class Processor():
 
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
-        #self.edges = {**self.edges, **self.add_inter_demand_connections(largest_cc)}
+        largest_cc = max(nx.connected_components(self.g), key=len)
+        self.edges = {**self.edges, **self.add_inter_demand_connections(largest_cc)}
 
         if not rerun:
-            largest_cc = max(nx.connected_components(self.g), key=len)
+
             self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
@@ -305,8 +306,7 @@ class Processor():
         with open(f'{self.where}/output/look_up.pickle', 'rb') as handle:
             self.look_up = pickle.load(handle)
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
-            self.index = len(self.look_up) + 1
-
+ 
         with open(f'{self.where}/output/edges.pickle', 'rb') as handle:
             self.edges = pickle.load(handle)
 
@@ -315,6 +315,7 @@ class Processor():
 
         with open(f'{self.where}/output/convert_ids.pickle', 'rb') as handle:
             self.convert_ids = pickle.load(handle)
+            self.index = max(self.convert_ids.values()) + 1
 
     def store_intermediate(self):
         with open(f'{self.where}/output/demand_nodes.pickle', 'wb') as handle:
