@@ -265,6 +265,7 @@ class Processor():
             self.demand_nodes[end] = 1
             self.edge_to_geom[(start, end)] = line.wkt
             self.edges[(start, end)] = line.length
+        self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
     def geom_to_graph(self, rerun=False):
         if not self.edges:
@@ -305,7 +306,6 @@ class Processor():
 
         with open(f'{self.where}/output/look_up.pickle', 'rb') as handle:
             self.look_up = pickle.load(handle)
-            self.flip_look_up = {v: k for k, v in self.look_up.items()}
  
         with open(f'{self.where}/output/edges.pickle', 'rb') as handle:
             self.edges = pickle.load(handle)
