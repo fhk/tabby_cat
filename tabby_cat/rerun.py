@@ -1,4 +1,4 @@
-"""
+q"""
 Main entry point for tabby cat
 """
 import os
@@ -17,10 +17,12 @@ def main():
 
     logging.info("Starting processing")
     pr = Processor(where)
-    test_lines = gpd.read_file(f"{where}/output/test_lines.shp")
-    pr.add_test_line_edges(test_lines)
     logging.info("Snapping addresses to streets")
     pr.load_intermediate()
+
+    test_lines = gpd.read_file(f"{where}/output/test_lines.shp")
+    pr.add_test_line_edges(test_lines)
+
     pr.loaded = True
     logging.info("Converting GIS to graph")
     pr.geom_to_graph(rerun=True)
