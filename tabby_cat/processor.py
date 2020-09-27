@@ -226,9 +226,11 @@ class Processor():
                 node = self.flip_look_up[self.convert_ids[n]]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
-                    nn_coord = self.flip_look_up[next_node]
+                    nn_coord = self.flip_look_up.get(self.convert_ids.get(next_node, None), None)
+                    if nn_coord is None:
+                        continue
                     line = LineString([eval(node), eval(nn_coord)])
-                    self.edge_to_geom[n, max_convert_id] = line.wkt
+                    self.edge_to_geom[convert_id[n], convert_id[nn_coord]] = line.wkt
                     cost = line.length
                     if len(path) == 3:
                         demand_links[n, max_convert_id] = cost * 3 # Increase cost to prefer drop
@@ -281,7 +283,6 @@ class Processor():
         self.edges = {**self.edges, **self.add_inter_demand_connections(largest_cc)}
 
         if not rerun:
-
             self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
