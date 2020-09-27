@@ -26,6 +26,7 @@ class Processor():
         self.demand = set()
         self.demand_nodes = defaultdict(int)
         self.edge_to_geom = {}
+        self.convert_ids = None
         self.inProj = Proj(init='epsg:3857')
         self.outProj = Proj(init='epsg:4326')
         self.loaded = False
@@ -214,29 +215,33 @@ class Processor():
         else:
             return LineString(new_lines[0])
 
-    def add_inter_demand_connections(self):
+    def add_inter_demand_connections(self, largest):
         demand_links = OrderedDict()
+        max_convert_id = max(self.convert_ids.values())
         for n in self.g.nodes():
-            if self.g.degree(n) == 1:
+            if self.g.degree(n) == 1 and in largest:
+                if n not in self.convert_ids:
+                    max_convert_id += 1
+                    self.convert_ids[n] = max_convert_id
                 node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
 
                     nn_coord = self.flip_look_up[next_node]
                     line = LineString([eval(node), eval(nn_coord)])
-                    self.edge_to_geom[n, next_node] = line.wkt
+                    self.edge_to_geom[n, max_convert_id] = line.wkt
                     cost = line.length
                     if len(path) == 3:
-                        demand_links[n, next_node] = cost * 3 # Increase cost to prefer drop
+                        demand_links[n, max_convert_id] = cost * 3 # Increase cost to prefer drop
                     edge_mid = tuple(list(path.values())[2][1:])
                     edge_mid_flip = edge_mid[::-1]
                     edge_length = self.edges.get(edge_mid, False)
                     if not edge_length:
                         edge_length = self.edges[edge_mid_flip]
                     if len(path) == 4 and edge_length < 9:
-                        demand_links[n, next_node] = cost
+                        demand_links[n, max_convert_id] = cost
                     else:
-                        demand_links[n, next_node] = cost * 2
+                        demand_links[n, max_convert_id] = cost * 2
 
         return demand_links
 
@@ -271,14 +276,17 @@ class Processor():
             self.snap_lines.geometry.apply(lambda x: self.set_node_ids(x))
 
         self.g = nx.Graph()
-        self.edges = {**self.edges, **self.add_inter_demand_connections()}
         self.g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(self.g), key=len)
-        self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
-        self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
-        self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
+        self.edges = {**self.edges, **self.add_inter_demand_connections(largest_cc)}
 
-        self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
+        if not self.convert_ids is None:
+            self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
+
+        if not rerun:
+            self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
+            self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
+            self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
         
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
