@@ -277,10 +277,10 @@ class Processor():
         max_convert_id = max(self.convert_ids.values())
         if rerun is True:
             for s, e in self.edges:
-                if s not in self.convert_ids:
+                if s not in self.convert_ids and s in largest_cc:
                     max_convert_id += 1
                     self.convert_ids[s] = max_convert_id
-                if e not in self.convert_ids:
+                if e not in self.convert_ids and e in largest_cc:
                     max_convert_id += 1
                     self.convert_ids[e] = max_convert_id
         self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
