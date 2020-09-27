@@ -223,11 +223,10 @@ class Processor():
                 if n not in self.convert_ids:
                     max_convert_id += 1
                     self.convert_ids[n] = max_convert_id
-                node = self.flip_look_up[n]
+                node = self.flip_look_up[self.convert_ids[n]]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
-
-                    nn_coord = self.flip_look_up[next_node]
+                    nn_coord = self.flip_look_up[self.convert_ids[next_node]]
                     line = LineString([eval(node), eval(nn_coord)])
                     self.edge_to_geom[n, max_convert_id] = line.wkt
                     cost = line.length
