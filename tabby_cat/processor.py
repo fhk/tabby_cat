@@ -251,12 +251,12 @@ class Processor():
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
             e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
-            start = self.convert_ids.get(self.look_up.get(s_coord_string, {}), None)
+            start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
             if start is None:
                 self.look_up[s_coord_string] = self.index
                 start = self.index
                 self.index += 1
-            end = self.convert_ids.get(self.look_up.get(e_coord_string, {}), None)
+            end = self.convert_ids.get(self.look_up.get(e_coord_string, None), None)
             if end is None:
                 self.look_up[e_coord_string] = self.index
                 end = self.index
