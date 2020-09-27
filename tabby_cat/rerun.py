@@ -1,4 +1,4 @@
-q"""
+"""
 Main entry point for tabby cat
 """
 import os
