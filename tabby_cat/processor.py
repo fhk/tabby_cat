@@ -214,11 +214,10 @@ class Processor():
         else:
             return LineString(new_lines[0])
 
-    def add_inter_demand_connections(self):
+    def add_inter_demand_connections(self, largest):
         demand_links = OrderedDict()
         for n in self.g.nodes():
-
-            if self.g.degree(n) == 1:
+            if self.g.degree(n) == 1 and n in largest:
                 node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
@@ -274,7 +273,7 @@ class Processor():
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(self.g), key=len)
-        self.edges = {**self.edges, **self.add_inter_demand_connections()}
+        self.edges = {**self.edges, **self.add_inter_demand_connections(largest_cc)}
         self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
         if rerun is False:
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
