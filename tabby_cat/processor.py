@@ -259,9 +259,7 @@ class Processor():
                 self.index += 1
             end = self.convert_ids.get(self.look_up.get(e_coord_string, None), None)
             if end is None:
-                self.look_up[e_coord_string] = self.index
-                end = self.index
-                self.index += 1
+                continue
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
             self.edge_to_geom[(start, end)] = line.wkt
