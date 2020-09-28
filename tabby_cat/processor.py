@@ -220,7 +220,7 @@ class Processor():
         for n in self.g.nodes():
             if self.g.degree(n) == 1 and n in largest:
 
-                node = self.flip_look_up[self.convert_ids[n]]
+                node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
                     nn_coord = self.flip_look_up['next_node']
