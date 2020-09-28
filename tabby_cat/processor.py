@@ -223,7 +223,7 @@ class Processor():
                 node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
-                    nn_coord = self.flip_look_up['next_node']
+                    nn_coord = self.flip_look_up[next_node]
                     line = LineString([eval(node), eval(nn_coord)])
                     self.edge_to_geom[n, next_node] = line.wkt
                     cost = line.length
