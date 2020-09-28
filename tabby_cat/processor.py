@@ -230,7 +230,7 @@ class Processor():
                     if nn_coord is None:
                         continue
                     line = LineString([eval(node), eval(nn_coord)])
-                    self.edge_to_geom[convert_id[n], convert_id[nn_coord]] = line.wkt
+                    self.edge_to_geom[self.convert_ids[n], self.convert_ids[next_node]] = line.wkt
                     cost = line.length
                     if len(path) == 3:
                         demand_links[n, max_convert_id] = cost * 3 # Increase cost to prefer drop
