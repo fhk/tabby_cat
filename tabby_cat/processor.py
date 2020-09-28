@@ -252,11 +252,15 @@ class Processor():
                 continue
 
             start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
+
             if start is None:
                 self.convert_ids[start] = self.index
                 self.look_up[s_coord_string] = self.index
                 start = self.index
                 self.index += 1
+
+            if (start, end) in self.edges:
+                continue
 
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
