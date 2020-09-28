@@ -220,29 +220,25 @@ class Processor():
         max_convert_id = max(self.convert_ids.values())
         for n in self.g.nodes():
             if self.g.degree(n) == 1 and n in largest:
-                if n not in self.convert_ids:
-                    max_convert_id += 1
-                    self.convert_ids[n] = max_convert_id
+
                 node = self.flip_look_up[self.convert_ids[n]]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
-                    nn_coord = self.flip_look_up.get(self.convert_ids.get(next_node, None), None)
-                    if nn_coord is None:
-                        continue
+                    nn_coord = self.flip_look_up['next_node']
                     line = LineString([eval(node), eval(nn_coord)])
-                    self.edge_to_geom[self.convert_ids[n], self.convert_ids[next_node]] = line.wkt
+                    self.edge_to_geom[n, next_node] = line.wkt
                     cost = line.length
                     if len(path) == 3:
-                        demand_links[n, max_convert_id] = cost * 3 # Increase cost to prefer drop
+                        demand_links[n, next_node] = cost * 3  # Increase cost to prefer drop
                     edge_mid = tuple(list(path.values())[2][1:])
                     edge_mid_flip = edge_mid[::-1]
                     edge_length = self.edges.get(edge_mid, False)
                     if not edge_length:
                         edge_length = self.edges[edge_mid_flip]
                     if len(path) == 4 and edge_length < 9:
-                        demand_links[n, max_convert_id] = cost
+                        demand_links[n, next_node] = cost
                     else:
-                        demand_links[n, max_convert_id] = cost * 2
+                        demand_links[n, next_node] = cost * 2
 
         return demand_links
 
@@ -252,14 +248,18 @@ class Processor():
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
             e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
-            start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
-            if start is None:
-                self.look_up[s_coord_string] = self.index
-                start = self.index
-                self.index += 1
             end = self.convert_ids.get(self.look_up.get(e_coord_string, None), None)
             if end is None:
                 continue
+
+            start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
+            if start is None:
+                max_convert_id += 1
+                self.convert_ids[start] = self.index
+                self.look_up[s_coord_string] = self.index
+                start = self.index
+                self.index += 1
+
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
             self.edge_to_geom[(start, end)] = line.wkt
