@@ -218,8 +218,7 @@ class Processor():
     def add_inter_demand_connections(self, largest):
         demand_links = OrderedDict()
         for n in self.g.nodes():
-            if self.g.degree(n) == 1 and n in largest:
-
+            if self.g.degree(n) == 1 and n in largest and self.demand_nodes[n]:
                 node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
@@ -254,9 +253,9 @@ class Processor():
             start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
 
             if start is None:
-                self.convert_ids[start] = self.index
-                self.look_up[s_coord_string] = self.index
                 start = self.index
+                self.convert_ids[start] = start
+                self.look_up[s_coord_string] = start
                 self.index += 1
 
             if (start, end) in self.edges:
