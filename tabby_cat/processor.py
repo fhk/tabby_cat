@@ -217,7 +217,6 @@ class Processor():
 
     def add_inter_demand_connections(self, largest):
         demand_links = OrderedDict()
-        max_convert_id = max(self.convert_ids.values())
         for n in self.g.nodes():
             if self.g.degree(n) == 1 and n in largest:
 
@@ -254,7 +253,6 @@ class Processor():
 
             start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
             if start is None:
-                max_convert_id += 1
                 self.convert_ids[start] = self.index
                 self.look_up[s_coord_string] = self.index
                 start = self.index
