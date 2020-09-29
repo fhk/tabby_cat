@@ -243,7 +243,7 @@ class Processor():
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
         max_node_full_graph = max(self.convert_ids.keys())
-        flip_node = {v: k for k, v in self.convert_ids.itmes()}
+        flip_node = {v: k for k, v in self.convert_ids.items()}
         for line in test_lines.geometry:
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
