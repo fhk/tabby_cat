@@ -252,11 +252,14 @@ class Processor():
             if end is None:
                 continue
 
-            start = self.index
-            max_node_full_graph += 1
-            self.convert_ids[max_node_full_graph] = start
-            self.look_up[s_coord_string] = start
-            self.index += 1
+            start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
+
+            if start is None:
+                start = self.index
+                max_node_full_graph += 1
+                self.convert_ids[max_node_full_graph] = start
+                self.look_up[s_coord_string] = start
+                self.index += 1
 
             if (start, end) in self.edges:
                 continue
