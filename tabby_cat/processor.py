@@ -242,28 +242,28 @@ class Processor():
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
+        max_node_full_graph = max(self.convert_ids.keys())
+        flip_node = {v: k for k, v in self.convert_ids.itmes()}
         for line in test_lines.geometry:
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
             e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
-            end = self.convert_ids.get(self.look_up.get(e_coord_string, None), None)
+            end = self.look_up.get(e_coord_string, None)
             if end is None:
                 continue
 
-            start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
-
-            if start is None:
-                start = self.index
-                self.convert_ids[start] = start
-                self.look_up[s_coord_string] = start
-                self.index += 1
+            start = self.index
+            max_node_full_graph += 1
+            self.convert_ids[max_node_full_graph] = start
+            self.look_up[s_coord_string] = start
+            self.index += 1
 
             if (start, end) in self.edges:
                 continue
 
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
-            self.edge_to_geom[(start, end)] = line.wkt
+            self.edge_to_geom[(max_node_full_graph, flip_node[end])] = line.wkt
             self.edges[(start, end)] = line.length
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
