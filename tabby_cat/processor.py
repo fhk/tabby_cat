@@ -252,7 +252,7 @@ class Processor():
             if end is None:
                 continue
 
-            start = self.convert_ids.get(self.look_up.get(s_coord_string, None), None)
+            start = self.look_up.get(s_coord_string, None)
 
             if start is None:
                 start = self.index
