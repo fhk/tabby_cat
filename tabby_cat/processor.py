@@ -282,12 +282,12 @@ class Processor():
         self.edges = {**self.edges, **self.add_inter_demand_connections(largest_cc)}
 
         if not rerun:
-            self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
-            self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
-            self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
+            self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
             self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
-        
+            self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
+            self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
+            
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
