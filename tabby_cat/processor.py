@@ -248,7 +248,7 @@ class Processor():
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
             e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
-            end = self.look_up.get(e_coord_string, None)
+            end = self.convert_ids.get(self.look_up.get(e_coord_string, None), None)
             if end is None:
                 continue
 
@@ -262,9 +262,9 @@ class Processor():
                 continue
 
             self.demand_nodes[start] = 1
-            self.demand_nodes[self.convert_ids[end]] = 1
-            self.edge_to_geom[(max_node_full_graph, end)] = line.wkt
-            self.edges[(start, self.convert_ids[end])] = line.length
+            self.demand_nodes[end] = 1
+            self.edge_to_geom[(max_node_full_graph, flip_node[end])] = line.wkt
+            self.edges[(start, end)] = line.length
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
     def geom_to_graph(self, rerun=False):
