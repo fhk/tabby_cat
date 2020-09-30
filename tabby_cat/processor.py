@@ -309,6 +309,7 @@ class Processor():
 
         with open(f'{self.where}/output/look_up.pickle', 'rb') as handle:
             self.look_up = pickle.load(handle)
+            self.flip_look_up = {v: k for k, v in self.look_up.items()}
  
         with open(f'{self.where}/output/edges.pickle', 'rb') as handle:
             self.edges = pickle.load(handle)
