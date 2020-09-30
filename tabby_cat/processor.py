@@ -217,7 +217,7 @@ class Processor():
 
     def add_inter_demand_connections(self, largest):
         demand_links = OrderedDict()
-        flip_node = {v: k fo k, v in self.convert_ids.itmes()}
+        flip_node = {v: k for k, v in self.convert_ids.itmes()}
         for n in self.g.nodes():
             if self.g.degree(n) == 1 and n in largest and self.demand_nodes[n]:
                 node = self.flip_look_up[n]
