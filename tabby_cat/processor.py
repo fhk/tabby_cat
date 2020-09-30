@@ -217,6 +217,7 @@ class Processor():
 
     def add_inter_demand_connections(self, largest):
         demand_links = OrderedDict()
+        flip_node = {v: k fo k, v in self.convert_ids.itmes()}
         for n in self.g.nodes():
             if self.g.degree(n) == 1 and n in largest and self.demand_nodes[n]:
                 node = self.flip_look_up[n]
@@ -224,7 +225,7 @@ class Processor():
                 for next_node in list(path.keys())[2:]:
                     nn_coord = self.flip_look_up[next_node]
                     line = LineString([eval(node), eval(nn_coord)])
-                    self.edge_to_geom[n, next_node] = line.wkt
+                    self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
                     cost = line.length
                     if len(path) == 3:
                         demand_links[n, next_node] = cost * 3  # Increase cost to prefer drop
