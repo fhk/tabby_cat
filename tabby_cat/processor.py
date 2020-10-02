@@ -300,6 +300,7 @@ class Processor():
             (flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]),
             LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt)]
             for i, s in enumerate(s_edges)], columns=['id', 'geom'])
+        s_frame['geom'] = s_frame.geom.apply(wkt.loads)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
