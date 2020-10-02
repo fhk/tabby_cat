@@ -298,7 +298,7 @@ class Processor():
         flip_node = {v:k for k, v in self.convert_ids.items()}
         s_frame = pd.DataFrame([[i, self.edge_to_geom.get(
             (flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]),
-            LineString([eval(self.flip_look_up[flip_node[edge_keys[s][0]]]), eval(self.flip_look_up[flip_node[edge_keys[s][1]]])]))]
+            LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]))]
             for i, s in enumerate(s_edges)], columns=['id', 'geom'])
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
