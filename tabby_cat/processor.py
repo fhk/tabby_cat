@@ -216,30 +216,28 @@ class Processor():
             return LineString(new_lines[0])
 
     def add_inter_demand_connections(self, largest):
-        demand_links = OrderedDict()
         flip_node = {v: k for k, v in self.convert_ids.items()}
         for n in self.g.nodes():
             if self.g.degree(n) == 1 and n in largest and self.demand_nodes[n]:
                 node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
-                    nn_coord = self.flip_look_up[next_node]
-                    line = LineString([eval(node), eval(nn_coord)])
-                    self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
-                    cost = line.length
-                    if len(path) == 3:
-                        demand_links[n, next_node] = cost * 3  # Increase cost to prefer drop
-                    edge_mid = tuple(list(path.values())[2][1:])
-                    edge_mid_flip = edge_mid[::-1]
-                    edge_length = self.edges.get(edge_mid, False)
-                    if not edge_length:
-                        edge_length = self.edges[edge_mid_flip]
-                    if len(path) == 4 and edge_length < 9:
-                        demand_links[n, next_node] = cost
-                    else:
-                        demand_links[n, next_node] = cost * 2
-
-        return demand_links
+                    if self.demand_nodes[next_node]:
+                        nn_coord = self.flip_look_up[next_node]
+                        line = LineString([eval(node), eval(nn_coord)])
+                        self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
+                        cost = line.length
+                        if len(path) == 3:
+                            self.edges[n, next_node] = cost * 3  # Increase cost to prefer drop
+                        edge_mid = tuple(list(path.values())[2][1:])
+                        edge_mid_flip = edge_mid[::-1]
+                        edge_length = self.edges.get(edge_mid, False)
+                        if not edge_length:
+                            edge_length = self.edges[edge_mid_flip]
+                        if len(path) == 4 and edge_length < 9:
+                            self.edges[n, next_node] = cost
+                        else:
+                            self.edges[n, next_node] = cost * 2
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
@@ -298,7 +296,7 @@ class Processor():
     def graph_to_geom(self, s_edges):
         edge_keys = list(self.edges)
         flip_node = {v:k for k, v in self.convert_ids.items()}
-        s_frame = pd.DataFrame([[i, LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])])] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
+        s_frame = pd.DataFrame([[i, self.edge_to_geom(flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]])] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
