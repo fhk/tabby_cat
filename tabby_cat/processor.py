@@ -296,7 +296,7 @@ class Processor():
     def graph_to_geom(self, s_edges):
         edge_keys = list(self.edges)
         flip_node = {v:k for k, v in self.convert_ids.items()}
-        s_frame = pd.DataFrame([[i, self.edge_to_geom(flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]])] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
+        s_frame = pd.DataFrame([[i, self.edge_to_geom[flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]]] for i, s in enumerate(s_edges)], columns=['id', 'geom'])
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
