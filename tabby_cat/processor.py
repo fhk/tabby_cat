@@ -289,7 +289,8 @@ class Processor():
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(self.g), key=len)
-        self.add_inter_demand_connections(largest_cc)
+        i_demand_conn = self.add_inter_demand_connections(largest_cc)
+        self.edges = {**self.edges, **i_demand_conn}
 
         if not rerun:
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
