@@ -218,35 +218,35 @@ class Processor():
     def add_inter_demand_connections(self, largest):
         flip_node = {v: k for k, v in self.convert_ids.items()}
         id_conn = OrderedDict()
-        for n in self.g.nodes():
-            if self.g.degree(n) == 1 and n in largest and self.demand_nodes[n]:
-                node = self.flip_look_up[n]
-                path = nx.single_source_shortest_path(self.g, n, 3)
-                for next_node in list(path.keys())[2:]:
-                    if self.demand_nodes[next_node] and self.g.degree(next_node) == 1:
-                        if (n, next_node) in self.edges or (next_node, n) in self.edges:
-                            continue
-                        nn_coord = self.flip_look_up[next_node]
-                        line = LineString([eval(node), eval(nn_coord)])
-                        self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
-                        cost = line.length
-                        if len(path) == 3:
-                            id_conn[n, next_node] = cost * 3  # Increase cost to prefer drop
-                        edge_mid = tuple(list(path.values())[2][1:])
-                        edge_mid_flip = edge_mid[::-1]
-                        edge_length = self.edges.get(edge_mid, False)
-                        if not edge_length:
-                            edge_length = self.edges[edge_mid_flip]
-                        if len(path) == 4 and edge_length < 9:
-                            id_conn[n, next_node] = cost
-                        else:
-                            id_conn[n, next_node] = cost * 2
-        return id_conn
+        for n in self.nodes_to_connect:
+            node = self.flip_look_up[n]
+            path = nx.single_source_shortest_path(self.g, n, 3)
+            for next_node in list(path.keys())[2:]:
+                if self.demand_nodes[next_node] and self.g.degree(next_node) == 1:
+                    if (n, next_node) in self.edges or (next_node, n) in self.edges:
+                        continue
+                    nn_coord = self.flip_look_up[next_node]
+                    line = LineString([eval(node), eval(nn_coord)])
+                    self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
+                    cost = line.length
+                    if len(path) == 3:
+                        id_conn[n, next_node] = cost * 3  # Increase cost to prefer drop
+                    edge_mid = tuple(list(path.values())[2][1:])
+                    edge_mid_flip = edge_mid[::-1]
+                    edge_length = self.edges.get(edge_mid, False)
+                    if not edge_length:
+                        edge_length = self.edges[edge_mid_flip]
+                    if len(path) == 4 and edge_length < 9:
+                        id_conn[n, next_node] = cost
+                    else:
+                        id_conn[n, next_node] = cost * 2
+    return id_conn
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
         max_node_full_graph = max(self.convert_ids.keys())
         flip_node = {v: k for k, v in self.convert_ids.items()}
+        self.nodes_to_connect = set()
         for line in test_lines.geometry:
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
@@ -269,6 +269,7 @@ class Processor():
 
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
+            self.nodes_to_connect.add(start)
             self.edge_to_geom[(max_node_full_graph, flip_node[end])] = line.wkt
             self.edges[(start, end)] = line.length
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
