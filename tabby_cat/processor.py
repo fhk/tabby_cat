@@ -240,7 +240,7 @@ class Processor():
                         id_conn[n, next_node] = cost
                     else:
                         id_conn[n, next_node] = cost * 2
-    return id_conn
+        return id_conn
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
