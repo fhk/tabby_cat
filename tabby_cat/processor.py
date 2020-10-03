@@ -222,6 +222,7 @@ class Processor():
             node = self.flip_look_up[n]
             path = nx.single_source_shortest_path(self.g, n, 3)
             for next_node in list(path.keys())[2:]:
+                n_path = path[next_node]
                 if next_node in self.nodes_to_connect:
                     if (n, next_node) in self.edges or (next_node, n) in self.edges:
                         continue
@@ -229,15 +230,15 @@ class Processor():
                     line = LineString([eval(node), eval(nn_coord)])
                     self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
                     cost = line.length
-                    if len(path) == 3:
+                    if len(n_path) == 3:
                         self.edges[n, next_node] = cost * 3  # Increase cost to prefer drop
                         continue
-                    edge_mid = tuple(list(path.values())[2][1:])
+                    edge_mid = tuple(n_path[2][1:])
                     edge_mid_flip = edge_mid[::-1]
                     edge_length = self.edges.get(edge_mid, False)
                     if not edge_length:
                         edge_length = self.edges[edge_mid_flip]
-                    if len(path) == 4 and edge_length < 9:
+                    if len(n_path) == 4 and edge_length < 9:
                         self.edges[n, next_node] = cost
                     else:
                         self.edges[n, next_node] = cost * 2
