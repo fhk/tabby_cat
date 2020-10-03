@@ -225,7 +225,7 @@ class Processor():
         tree = cKDTree(np.c_[x, y])
         for n in self.nodes_to_connect:
             dd, ii = tree.query(eval(self.flip_look_up[n]), k=[2])
-            nearest = self.look_up(f'[{int(x[ii])}, {int(y[ii])}]')
+            nearest = self.look_up['[{int(x[ii])}, {int(y[ii])}]']
             self.edges[n, nearest] = dd
 
     def add_test_line_edges(self, test_lines):
