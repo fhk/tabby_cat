@@ -222,7 +222,7 @@ class Processor():
                 node = self.flip_look_up[n]
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
-                    if self.demand_nodes[next_node] and self.g.degree(n) == 1:
+                    if self.demand_nodes[next_node] and self.g.degree(next_node) == 1:
                         if (n, next_node) in self.edges or (next_node, n) in self.edges:
                             continue
                         nn_coord = self.flip_look_up[next_node]
