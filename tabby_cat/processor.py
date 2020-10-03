@@ -15,6 +15,7 @@ from shapely import wkt
 from shapely.ops import split
 from shapely.geometry import LineString, MultiPoint, MultiLineString
 from pyproj import Proj, transform
+from scipy.spatial import cKDTree
 
 
 class Processor():
@@ -83,7 +84,7 @@ class Processor():
         closest = tmp.groupby("pt_idx").first()
 
         # construct a GeoDataFrame of the closest lines
-        return  gpd.GeoDataFrame(closest, geometry="geometry")
+        return gpd.GeoDataFrame(closest, geometry="geometry")
 
     def points_to_multipoint(self, data):
         coords = set()
@@ -218,14 +219,15 @@ class Processor():
     def add_inter_demand_connections(self, largest):
         flip_node = {v: k for k, v in self.convert_ids.items()}
         id_conn = OrderedDict()
+        x = np.array([
+            eval(self.flip_look_up[flip_node[n]])[0] for n in self.nodes_to_connect])
+        y = np.array([
+            eval(self.flip_look_up[flip_node[n]])[1] for n in self.nodes_to_connect])
+        tree = cKDTree(np.c_[x, y])
         for n in self.nodes_to_connect:
-            for nn in self.nodes_to_connect:
-                n_node = self.flip_look_up[n]
-                nn_node = self.flip_look_up[nn]
-                line = LineString([eval(n_node), eval(nn_node)])
-                cost = line.length
-                if not n == nn:
-                    self.edges[n, n] = 2 * cost
+            dd, ii = tree.query(eval(self.flip_look_up[flip_node[n]]), k=[2])
+            nearest = self.look_up(f'{points[ii]}')
+            self.edges(n, nearest) = 100
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
