@@ -247,15 +247,15 @@ class Processor():
             if start:
                 continue
 
+            if (start, end) in self.edges:
+                continue
+
             if start is None:
                 start = self.index
                 max_node_full_graph += 1
                 self.convert_ids[max_node_full_graph] = start
                 self.look_up[s_coord_string] = start
                 self.index += 1
-
-            if (start, end) in self.edges:
-                continue
 
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
