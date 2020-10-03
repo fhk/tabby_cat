@@ -217,15 +217,14 @@ class Processor():
             return LineString(new_lines[0])
 
     def add_inter_demand_connections(self, largest):
-        flip_node = {v: k for k, v in self.convert_ids.items()}
         id_conn = OrderedDict()
         x = np.array([
-            eval(self.flip_look_up[flip_node[n]])[0] for n in self.nodes_to_connect])
+            eval(self.flip_look_up[n])[0] for n in self.nodes_to_connect])
         y = np.array([
-            eval(self.flip_look_up[flip_node[n]])[1] for n in self.nodes_to_connect])
+            eval(self.flip_look_up[n])[1] for n in self.nodes_to_connect])
         tree = cKDTree(np.c_[x, y])
         for n in self.nodes_to_connect:
-            dd, ii = tree.query(eval(self.flip_look_up[flip_node[n]]), k=[2])
+            dd, ii = tree.query(eval(self.flip_look_up[n]), k=[2])
             nearest = self.look_up(f'{points[ii]}')
             self.edges[n, nearest] = 100
 
