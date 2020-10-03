@@ -223,6 +223,8 @@ class Processor():
                 path = nx.single_source_shortest_path(self.g, n, 3)
                 for next_node in list(path.keys())[2:]:
                     if self.demand_nodes[next_node] and self.g.degree(n) == 1:
+                        if (n, next_node) in self.edges or (next_node, n) in self.edges:
+                            continue
                         nn_coord = self.flip_look_up[next_node]
                         line = LineString([eval(node), eval(nn_coord)])
                         self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
