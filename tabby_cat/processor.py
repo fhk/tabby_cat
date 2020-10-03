@@ -26,6 +26,7 @@ class Processor():
         self.cut_lines = None
         self.demand = set()
         self.demand_nodes = defaultdict(int)
+        self.nodes_to_connect = set()
         self.edge_to_geom = {}
         self.convert_ids = None
         self.inProj = Proj(init='epsg:3857')
@@ -233,7 +234,7 @@ class Processor():
         test_lines = test_lines.to_crs("epsg:3857")
         max_node_full_graph = max(self.convert_ids.keys())
         flip_node = {v: k for k, v in self.convert_ids.items()}
-        self.nodes_to_connect = set()
+
         for line in test_lines.geometry:
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
@@ -276,8 +277,6 @@ class Processor():
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(self.g), key=len)
-        self.add_inter_demand_connections(largest_cc)
-
 
         if not rerun:
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
@@ -285,6 +284,9 @@ class Processor():
             self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
             self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
+            self.nodes_to_connect = set(n for n in demand_nodes if self.g.degree(self.flip_look_up[n]) == 1)
+
+        self.add_inter_demand_connections(largest_cc)
             
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
