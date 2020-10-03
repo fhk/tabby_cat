@@ -222,7 +222,7 @@ class Processor():
             node = self.flip_look_up[n]
             path = nx.single_source_shortest_path(self.g, n, 3)
             for next_node in list(path.keys())[2:]:
-                if self.demand_nodes[next_node] and self.g.degree(next_node) == 1:
+                if next_node in self.nodes_to_connect:
                     if (n, next_node) in self.edges or (next_node, n) in self.edges:
                         continue
                     nn_coord = self.flip_look_up[next_node]
@@ -230,17 +230,17 @@ class Processor():
                     self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
                     cost = line.length
                     if len(path) == 3:
-                        id_conn[n, next_node] = cost * 3  # Increase cost to prefer drop
+                        self.edges[n, next_node] = cost * 3  # Increase cost to prefer drop
+                        continue
                     edge_mid = tuple(list(path.values())[2][1:])
                     edge_mid_flip = edge_mid[::-1]
                     edge_length = self.edges.get(edge_mid, False)
                     if not edge_length:
                         edge_length = self.edges[edge_mid_flip]
                     if len(path) == 4 and edge_length < 9:
-                        id_conn[n, next_node] = cost
+                        self.edges[n, next_node] = cost
                     else:
-                        id_conn[n, next_node] = cost * 2
-        return id_conn
+                        self.edges[n, next_node] = cost * 2
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
@@ -289,8 +289,8 @@ class Processor():
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(self.g), key=len)
-        i_demand_conn = self.add_inter_demand_connections(largest_cc)
-        self.edges = {**self.edges, **i_demand_conn}
+        self.add_inter_demand_connections(largest_cc)
+
 
         if not rerun:
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
