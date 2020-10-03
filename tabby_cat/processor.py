@@ -233,7 +233,7 @@ class Processor():
                     if len(n_path) == 3:
                         self.edges[n, next_node] = cost * 3  # Increase cost to prefer drop
                         continue
-                    edge_mid = tuple(n_path[2][1:])
+                    edge_mid = tuple(n_path[1:-1])
                     edge_mid_flip = edge_mid[::-1]
                     edge_length = self.edges.get(edge_mid, False)
                     if not edge_length:
