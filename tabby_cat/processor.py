@@ -257,6 +257,9 @@ class Processor():
 
             start = self.look_up.get(s_coord_string, None)
 
+            if start:
+                continue
+
             if start is None:
                 start = self.index
                 max_node_full_graph += 1
