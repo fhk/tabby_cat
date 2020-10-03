@@ -217,6 +217,7 @@ class Processor():
 
     def add_inter_demand_connections(self, largest):
         flip_node = {v: k for k, v in self.convert_ids.items()}
+        id_conn = OrderedDict()
         for n in self.g.nodes():
             if self.g.degree(n) == 1 and n in largest and self.demand_nodes[n]:
                 node = self.flip_look_up[n]
@@ -230,16 +231,17 @@ class Processor():
                         self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
                         cost = line.length
                         if len(path) == 3:
-                            self.edges[n, next_node] = cost * 3  # Increase cost to prefer drop
+                            id_conn[n, next_node] = cost * 3  # Increase cost to prefer drop
                         edge_mid = tuple(list(path.values())[2][1:])
                         edge_mid_flip = edge_mid[::-1]
                         edge_length = self.edges.get(edge_mid, False)
                         if not edge_length:
                             edge_length = self.edges[edge_mid_flip]
                         if len(path) == 4 and edge_length < 9:
-                            self.edges[n, next_node] = cost
+                            id_conn[n, next_node] = cost
                         else:
-                            self.edges[n, next_node] = cost * 2
+                            id_conn[n, next_node] = cost * 2
+        return id_conn
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
