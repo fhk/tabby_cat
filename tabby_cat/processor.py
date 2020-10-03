@@ -226,7 +226,8 @@ class Processor():
         for n in self.nodes_to_connect:
             dd, ii = tree.query(eval(self.flip_look_up[n]), k=[2])
             nearest = self.look_up[f'[{int(x[ii])}, {int(y[ii])}]']
-            self.edges[n, nearest] = float(dd)
+            if (n, nearest) not in self.edges or (nearest, n) not in self.edges:
+                self.edges[n, nearest] = float(dd)
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
