@@ -227,7 +227,7 @@ class Processor():
         for n in self.nodes_to_connect:
             dd, ii = tree.query(eval(self.flip_look_up[flip_node[n]]), k=[2])
             nearest = self.look_up(f'{points[ii]}')
-            self.edges(n, nearest) = 100
+            self.edges[n, nearest] = 100
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
