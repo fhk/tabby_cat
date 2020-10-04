@@ -323,7 +323,8 @@ class Processor():
             self.nodes_to_connect = set(n for n in self.demand_nodes if self.g.degree(self.flip_look_up[n]) == 1 and self.demand_nodes[n])
 
         self.add_inter_demand_connections()
-        self.add_graph_inter_demand_connections(largest_cc)
+        g_node_conn = self.add_graph_inter_demand_connections(largest_cc)
+        self.edges = {**self.edges, **g_node_conn}
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
