@@ -51,8 +51,13 @@ def main():
     sl.solve()
 
     pr.graph_to_geom(sl.s_edges)
+    if len(sys.argv) > 2:
+        pr.solution.to_crs("epsg:4326").to_file(
+            f"{where}/output/{traverse}_{node_gap}_{two_edge_cost}_{four_edge_cost}_{n_edge_cost}_{nearest_cost}_solution.shp")
+    else:
+        pr.solution.to_crs("epsg:4326").to_file(
+            f"{where}/output/solution.shp")
 
-    pr.solution.to_crs("epsg:4326").to_file(f"{where}/output/solution.shp")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
