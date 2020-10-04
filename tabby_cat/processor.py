@@ -249,7 +249,7 @@ class Processor():
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
             e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
-            end = self.convert_ids.get(self.look_up.get(e_coord_string, None), None)
+            end = self.look_up.get(e_coord_string, None)
             if end is None:
                 continue
 
@@ -258,7 +258,7 @@ class Processor():
             if start:
                 continue
 
-            if (start, end) in self.edges:
+            if self.edges.get((start, end), False) or self.edges.get((end, start), False):
                 continue
 
             if start is None:
