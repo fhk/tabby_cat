@@ -227,7 +227,8 @@ class Processor():
         #    eval(self.flip_look_up[n])[0] for n in self.nodes_to_connect])
         #y = np.array([
         #    eval(self.flip_look_up[n])[1] for n in self.nodes_to_connect])
-        tree = cKDTree(np.c_[**[x, y for _, x, y in all_x_y]])
+        n_all_x_y = np.array(all_x_y)
+        tree = cKDTree(np.c_[n_all_x_y.T[1:]])
         for n, x, y in all_x_y:
             dd, ii = tree.query((x, y), k=[2])
             nearest = self.look_up[f'[{int(all_x_y[ii])}, {int(all_x_y[ii])}]']
