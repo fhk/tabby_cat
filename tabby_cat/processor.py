@@ -223,17 +223,22 @@ class Processor():
         for n in self.nodes_to_connect:
             x, y = eval(self.flip_look_up[n])
             all_x_y.append([n, x, y])
-        #x = np.array([
-        #    eval(self.flip_look_up[n])[0] for n in self.nodes_to_connect])
-        #y = np.array([
-        #    eval(self.flip_look_up[n])[1] for n in self.nodes_to_connect])
         n_all_x_y = np.array(all_x_y)
-        tree = cKDTree(np.c_[n_all_x_y.T[1:]])
+        tree = cKDTree(n_all_x_y[:,1:3])
+        edge_conns = []
         for n, x, y in all_x_y:
             dd, ii = tree.query((x, y), k=[2])
-            nearest = self.look_up[f'[{int(all_x_y[ii])}, {int(all_x_y[ii])}]']
-            if (n, nearest) not in self.edges or (nearest, n) not in self.edges:
-                self.edges[n, nearest] = float(dd)
+            index = ii[0]
+            node_coord = f'[{all_x_y[index][1]}, {all_x_y[index][2]}]'
+            nearest = self.look_up[node_coord]
+            if not (self.edges.get((n, nearest), False) or self.edges.get((nearest, n), False)):
+                self.edges[n, nearest] = dd[0]
+                edge_conns.append([n, nearest, LineString(
+                    [[x, y], all_x_y[index][1:]])])
+        df = pd.DataFrame(edge_conns, columns=['start', 'end', 'geom'])
+        gdf = gpd.GeoDataFrame(df, geometry='geom', crs="epsg:3857")
+        gdf = gdf.to_crs('epsg:4326')
+        gdf.to_file("connx.shp")
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
@@ -269,6 +274,7 @@ class Processor():
             self.edge_to_geom[(max_node_full_graph, flip_node[end])] = line.wkt
             self.edges[(start, end)] = line.length
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
+        self.flip_convert_ids = {v: k for k, v in self.convert_ids.items()}
 
     def geom_to_graph(self, rerun=False):
         if not self.edges:
