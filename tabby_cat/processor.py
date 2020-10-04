@@ -342,8 +342,7 @@ class Processor():
             node_gap=node_gap,
             two_edge_cost=two_edge_cost,
             four_edge_cost=four_edge_cost,
-            n_edge_cost=n_edge_cost,
-            nearest_cost=nearest_cost)
+            n_edge_cost=n_edge_cost)
         self.edges = {**self.edges, **g_node_conn}
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
