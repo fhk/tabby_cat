@@ -330,11 +330,11 @@ class Processor():
     def graph_to_geom(self, s_edges):
         edge_keys = list(self.edges)
         flip_node = {v:k for k, v in self.convert_ids.items()}
-        s_frame = pd.DataFrame([[i, self.edge_to_geom.get(
-            (flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]),
-            LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt),
-            edge_keys[s][0], edge_keys[s][1]]
-            for i, s in enumerate(s_edges)], columns=['id', 'start', 'end', 'geom'])
+        s_frame = pd.DataFrame([[i,edge_keys[s][0], edge_keys[s][1],
+            self.edge_to_geom.get(
+                (flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]),
+                LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt)]
+                for i, s in enumerate(s_edges)], columns=['id', 'start', 'end', 'geom'])
         s_frame['geom'] = s_frame.geom.apply(wkt.loads)
         s_frame['type'] = s_frame.apply(
             lambda x: 1 if (x.start in self.nodes_to_connect or x.end in self.nodes_to_connect) else 2, axis=1)
