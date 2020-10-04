@@ -217,7 +217,37 @@ class Processor():
         else:
             return LineString(new_lines[0])
 
-    def add_inter_demand_connections(self, largest):
+    def add_graph_inter_demand_connections(
+        self, largest, traverse=3, node_gap=9,
+        two_edge_cost=3, four_edge_cost=1, n_edge_cost=2):
+        flip_node = {v: k for k, v in self.convert_ids.items()}
+        id_conn = OrderedDict()
+        for n in self.nodes_to_connect:
+            node = self.flip_look_up[n]
+            path = nx.single_source_shortest_path(self.g, n, traverse)
+            for next_node in list(path.keys())[2:]:
+                n_path = path[next_node]
+                if next_node in self.nodes_to_connect:
+                    if (n, next_node) in self.edges.keys() or (next_node, n) in self.edges.keys():
+                        continue
+                    nn_coord = self.flip_look_up[next_node]
+                    line = LineString([eval(node), eval(nn_coord)])
+                    self.edge_to_geom[flip_node[n], flip_node[next_node]] = line.wkt
+                    cost = line.length
+                    if len(n_path) == 3:
+                        id_conn[n, next_node] = cost * two_edge_cost  # Increase cost to prefer drop
+                        continue
+                    edge_mid = tuple(n_path[1:-1])
+                    edge_mid_flip = edge_mid[::-1]
+                    edge_length = self.edges.get(edge_mid, False)
+                    if not edge_length:
+                        edge_length = self.edges[edge_mid_flip]
+                    if len(n_path) == 4 and edge_length < node_gap:
+                        id_conn[n, next_node] = cost * four_edge_cost
+                    else:
+                        id_conn[n, next_node] = cost * n_edge_cost
+
+    def add_inter_demand_connections(self, nearest_cost=1):
         id_conn = OrderedDict()
         all_x_y = []
         for n in self.nodes_to_connect:
@@ -232,13 +262,9 @@ class Processor():
             node_coord = f'[{all_x_y[index][1]}, {all_x_y[index][2]}]'
             nearest = self.look_up[node_coord]
             if not (self.edges.get((n, nearest), False) or self.edges.get((nearest, n), False)):
-                self.edges[n, nearest] = dd[0]
+                self.edges[n, nearest] = dd[0] * nearest_cost
                 edge_conns.append([n, nearest, LineString(
                     [[x, y], all_x_y[index][1:]])])
-        df = pd.DataFrame(edge_conns, columns=['start', 'end', 'geom'])
-        gdf = gpd.GeoDataFrame(df, geometry='geom', crs="epsg:3857")
-        gdf = gdf.to_crs('epsg:4326')
-        gdf.to_file("connx.shp")
 
     def add_test_line_edges(self, test_lines):
         test_lines = test_lines.to_crs("epsg:3857")
@@ -274,7 +300,6 @@ class Processor():
             self.edge_to_geom[(max_node_full_graph, flip_node[end])] = line.wkt
             self.edges[(start, end)] = line.length
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
-        self.flip_convert_ids = {v: k for k, v in self.convert_ids.items()}
 
     def geom_to_graph(self, rerun=False):
         if not self.edges:
@@ -297,8 +322,8 @@ class Processor():
             self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
             self.nodes_to_connect = set(n for n in self.demand_nodes if self.g.degree(self.flip_look_up[n]) == 1 and self.demand_nodes[n])
 
-        self.add_inter_demand_connections(largest_cc)
-            
+        self.add_inter_demand_connections()
+        self.add_graph_inter_demand_connections(largest_cc)
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
@@ -307,9 +332,12 @@ class Processor():
         flip_node = {v:k for k, v in self.convert_ids.items()}
         s_frame = pd.DataFrame([[i, self.edge_to_geom.get(
             (flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]),
-            LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt)]
-            for i, s in enumerate(s_edges)], columns=['id', 'geom'])
+            LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt),
+            edge_keys[s][0], edge_keys[s][1]]
+            for i, s in enumerate(s_edges)], columns=['id', 'start', 'end', 'geom'])
         s_frame['geom'] = s_frame.geom.apply(wkt.loads)
+        s_frame['type'] = s_frame.apply(
+            lambda x: 1 if (x.start in self.nodes_to_connect or x.end in self.nodes_to_connect) else 2, axis=1)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
