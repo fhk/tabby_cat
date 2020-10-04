@@ -14,7 +14,13 @@ from tabby_cat.solver import PCSTSolver
 def main():
     logging.basicConfig(filename='log.log',level=logging.DEBUG)
     where = sys.argv[1]
-
+    if len(sys.argv) > 2:
+        traverse = int(sys.argv[2]) # 3
+        node_gap = int(sys.argv[3]) # 9
+        two_edge_cost = int(sys.argv[4]) # 3
+        four_edge_cost = int(sys.argv[5]) # 1
+        n_edge_cost = int(sys.argv[6]) # 2
+        nearest_cost = int(sys.argv[7]) # 1
     logging.info("Starting processing")
     pr = Processor(where)
     logging.info("Snapping addresses to streets")
@@ -25,7 +31,14 @@ def main():
 
     pr.loaded = True
     logging.info("Converting GIS to graph")
-    pr.geom_to_graph(rerun=True)
+    pr.geom_to_graph(
+        rerun=True,
+        traverse=traverse,
+        node_gap=node_gap,
+        two_edge_cost=two_edge_cost,
+        four_edge_cost=four_edge_cost,
+        n_edge_cost=n_edge_cost,
+        nearest_cost=nearest_cost)
     #logging.info("Writing intermediate files")
     #pr.store_intermediate()
 

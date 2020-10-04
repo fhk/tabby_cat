@@ -302,7 +302,8 @@ class Processor():
             self.edges[(start, end)] = line.length
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
-    def geom_to_graph(self, rerun=False):
+    def geom_to_graph(self, rerun=False, traverse=3, node_gap=9, two_edge_cost=1000,
+            four_edge_cost=1000, n_edge_cost=1000, nearest_cost=1000):
         if not self.edges:
             self.cut_lines = self.cut_lines.dropna()
             self.cut_lines.geometry = self.cut_lines.geometry.apply(lambda x: self.expand_lines(x))
@@ -323,8 +324,15 @@ class Processor():
             self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
             self.nodes_to_connect = set(n for n in self.demand_nodes if self.g.degree(self.flip_look_up[n]) == 1 and self.demand_nodes[n])
 
-        self.add_inter_demand_connections()
-        g_node_conn = self.add_graph_inter_demand_connections(largest_cc)
+        self.add_inter_demand_connections(nearest_cost=nearest_cost)
+        g_node_conn = self.add_graph_inter_demand_connections(
+            largest_cc
+            traverse=traverse,
+            node_gap=node_gap,
+            two_edge_cost=two_edge_cost,
+            four_edge_cost=four_edge_cost,
+            n_edge_cost=n_edge_cost,
+            nearest_cost=nearest_cost)
         self.edges = {**self.edges, **g_node_conn}
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
