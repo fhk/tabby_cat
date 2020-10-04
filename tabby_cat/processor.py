@@ -219,14 +219,18 @@ class Processor():
 
     def add_inter_demand_connections(self, largest):
         id_conn = OrderedDict()
-        x = np.array([
-            eval(self.flip_look_up[n])[0] for n in self.nodes_to_connect])
-        y = np.array([
-            eval(self.flip_look_up[n])[1] for n in self.nodes_to_connect])
-        tree = cKDTree(np.c_[x, y])
+        all_x_y = []
         for n in self.nodes_to_connect:
-            dd, ii = tree.query(eval(self.flip_look_up[n]), k=[2])
-            nearest = self.look_up[f'[{int(x[ii])}, {int(y[ii])}]']
+            x, y = eval(self.flip_look_up[n])
+            all_x_y.append([n, x, y])
+        #x = np.array([
+        #    eval(self.flip_look_up[n])[0] for n in self.nodes_to_connect])
+        #y = np.array([
+        #    eval(self.flip_look_up[n])[1] for n in self.nodes_to_connect])
+        tree = cKDTree(np.c_[**[x, y for _, x, y in all_x_y]])
+        for n, x, y in all_x_y:
+            dd, ii = tree.query((x, y), k=[2])
+            nearest = self.look_up[f'[{int(all_x_y[ii])}, {int(all_x_y[ii])}]']
             if (n, nearest) not in self.edges or (nearest, n) not in self.edges:
                 self.edges[n, nearest] = float(dd)
 
