@@ -246,6 +246,7 @@ class Processor():
                         id_conn[n, next_node] = cost * four_edge_cost
                     else:
                         id_conn[n, next_node] = cost * n_edge_cost
+        return id_conn
 
     def add_inter_demand_connections(self, nearest_cost=1):
         id_conn = OrderedDict()
