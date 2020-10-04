@@ -326,7 +326,7 @@ class Processor():
 
         self.add_inter_demand_connections(nearest_cost=nearest_cost)
         g_node_conn = self.add_graph_inter_demand_connections(
-            largest_cc
+            largest_cc,
             traverse=traverse,
             node_gap=node_gap,
             two_edge_cost=two_edge_cost,
