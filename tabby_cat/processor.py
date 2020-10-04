@@ -238,11 +238,22 @@ class Processor():
                         id_conn[n, next_node] = cost * two_edge_cost  # Increase cost to prefer drop
                         continue
                     edge_mid = tuple(n_path[1:-1])
-                    edge_mid_flip = edge_mid[::-1]
-                    edge_length = self.edges.get(edge_mid, False)
-                    if not edge_length:
-                        edge_length = self.edges[edge_mid_flip]
+                    if len(edge_mid) = 2:
+                        edge_mid_flip = edge_mid[::-1]
+                        edge_length = self.edges.get(edge_mid, False)
+                        if not edge_length:
+                            edge_length = self.edges[edge_mid_flip]
+                    if len(edge_mid) > 2:
+                        edge_length = 0
+                        for i in range(len(edge_mid) - 1):
+                            a_edge = edge_mid[i:i+1]
+                            a_e_len = self.edges.get(a_edge, False)
+                            if not a_e_len:
+                                a_e_len = self.edges[a_edge[::-1]]
+                            edge_length += a_e_len
                     if len(n_path) == 4 and edge_length < node_gap:
+                        id_conn[n, next_node] = cost * four_edge_cost
+                    if len(n_path) > 4 and edge_length < node_gap:
                         id_conn[n, next_node] = cost * four_edge_cost
                     else:
                         id_conn[n, next_node] = cost * n_edge_cost

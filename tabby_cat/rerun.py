@@ -31,14 +31,17 @@ def main():
 
     pr.loaded = True
     logging.info("Converting GIS to graph")
-    pr.geom_to_graph(
-        rerun=True,
-        traverse=traverse,
-        node_gap=node_gap,
-        two_edge_cost=two_edge_cost,
-        four_edge_cost=four_edge_cost,
-        n_edge_cost=n_edge_cost,
-        nearest_cost=nearest_cost)
+    if len(sys.argv) > 2:
+        pr.geom_to_graph(
+            rerun=True,
+            traverse=traverse,
+            node_gap=node_gap,
+            two_edge_cost=two_edge_cost,
+            four_edge_cost=four_edge_cost,
+            n_edge_cost=n_edge_cost,
+            nearest_cost=nearest_cost)
+    else:
+        pr.geom_to_graph(rerun=True)
     #logging.info("Writing intermediate files")
     #pr.store_intermediate()
 
