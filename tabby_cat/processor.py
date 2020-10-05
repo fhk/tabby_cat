@@ -246,7 +246,7 @@ class Processor():
                     if len(edge_mid) > 2:
                         edge_length = 0
                         for i in range(len(edge_mid) - 1):
-                            a_edge = edge_mid[i:i+1]
+                            a_edge = edge_mid[i:i+2]
                             a_e_len = self.edges.get(a_edge, False)
                             if not a_e_len:
                                 a_e_len = self.edges[a_edge[::-1]]
