@@ -322,8 +322,8 @@ class Processor():
 
             if target_hex:
                 ll_line_demand, ll_line_node = og_lines.geometry.iloc[i].coords[:]
-                demand_hex = h3.geo_to_h3(ll_line_demand[0], ll_line_demand[1], 10)
-                node_hex = h3.geo_to_h3(ll_line_node[0], ll_line_node[1], 10)
+                demand_hex = h3.geo_to_h3(ll_line_demand[1], ll_line_demand[0], 10)
+                node_hex = h3.geo_to_h3(ll_line_node[1], ll_line_node[0], 10)
                 if demand_hex not in target_hex or node_hex not in target_hex:
                     self.demand_nodes[start] = 0
                     self.demand_nodes[end] = 0
