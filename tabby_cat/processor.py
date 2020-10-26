@@ -4,6 +4,7 @@ Run the DataLoader dataframes through processing
 import os
 import pickle
 import logging
+import copy
 from collections import OrderedDict, defaultdict
 
 import numpy as np
@@ -16,6 +17,7 @@ from shapely.ops import split
 from shapely.geometry import LineString, MultiPoint, MultiLineString
 from pyproj import Proj, transform
 from scipy.spatial import cKDTree
+import h3
 
 
 class Processor():
@@ -279,19 +281,27 @@ class Processor():
                     [[x, y], all_x_y[index][1:]])])
 
     def add_test_line_edges(self, test_lines):
+        og_lines = copy.copy(test_lines)
         test_lines = test_lines.to_crs("epsg:3857")
         max_node_full_graph = max(self.convert_ids.keys())
         flip_node = {v: k for k, v in self.convert_ids.items()}
 
-        for line in test_lines.geometry:
+        income_fn = f'{self.where}/{self.where.lower()}_income_pct.csv'
+        target_hex = []
+        if os.path.isfile(income_fn):
+            income_df = pd.read_csv()
+            target_hex = income_df['hex'].to_list()
+
+        for i, line in enumerate(test_lines.geometry):
             demand, node = line.coords[:]
             s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
             e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
+
             end = self.look_up.get(e_coord_string, None)
+            start = self.look_up.get(s_coord_string, None)
+
             if end is None:
                 continue
-
-            start = self.look_up.get(s_coord_string, None)
 
             if start:
                 continue
@@ -309,6 +319,16 @@ class Processor():
             self.demand_nodes[start] = 1
             self.demand_nodes[end] = 1
             self.nodes_to_connect.add(start)
+
+            if target_hex:
+                ll_line_demand, ll_line_node = og_lines.geometry.iloc[i].coords[:]
+                demand_hex = h3.geo_to_h3(ll_line_demand[0], ll_line_demand[1], 10)
+                node_hex = h3.geo_to_h3(ll_line_node[0], ll_line_node[1], 10)
+                if demand_hex not in target_hex or node_hex not in target_hex:
+                    self.demand_nodes[start] = 0
+                    self.demand_nodes[end] = 0
+                    self.nodes_to_connect.remove(start)
+
             self.edge_to_geom[(max_node_full_graph, flip_node[end])] = line.wkt
             self.edges[(start, end)] = line.length
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
