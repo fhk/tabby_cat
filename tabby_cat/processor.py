@@ -290,6 +290,7 @@ class Processor():
         target_hex = []
         if os.path.isfile(income_fn):
             income_df = pd.read_csv(income_fn)
+            income_df = income_df[income_df['pct_above'] >= 0.5]
             target_hex = income_df['hex'].to_list()
 
         for i, line in enumerate(test_lines.geometry):
@@ -324,7 +325,7 @@ class Processor():
                 ll_line_demand, ll_line_node = og_lines.geometry.iloc[i].coords[:]
                 demand_hex = h3.geo_to_h3(ll_line_demand[1], ll_line_demand[0], 10)
                 node_hex = h3.geo_to_h3(ll_line_node[1], ll_line_node[0], 10)
-                if demand_hex not in target_hex or node_hex not in target_hex:
+                if demand_hex in target_hex or node_hex in target_hex:
                     self.demand_nodes[start] = 0
                     self.demand_nodes[end] = 0
                     self.nodes_to_connect.remove(start)
