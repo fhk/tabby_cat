@@ -289,7 +289,7 @@ class Processor():
         income_fn = f'{self.where}/{self.where.lower()}_income_pct.csv'
         target_hex = []
         if os.path.isfile(income_fn):
-            income_df = pd.read_csv()
+            income_df = pd.read_csv(income_fn)
             target_hex = income_df['hex'].to_list()
 
         for i, line in enumerate(test_lines.geometry):
