@@ -28,7 +28,7 @@ setuptools.setup(
         "click==7.1.2",
         "click-plugins==1.1.1",
         "cligj==0.5.0",
-        "cryptography==2.9.2",
+        "cryptography==3.2",
         "idna==2.9",
         "mkl-service==2.3.0",
         "munch==2.5.0",
