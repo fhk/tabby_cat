@@ -30,7 +30,6 @@ setuptools.setup(
         "cligj==0.5.0",
         "cryptography==2.9.2",
         "idna==2.9",
-        "mkl-service==2.3.0",
         "munch==2.5.0",
         "networkx==2.4",
         "numpy==1.18.1",
