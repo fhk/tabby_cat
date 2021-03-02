@@ -267,6 +267,8 @@ class Processor():
         for n in self.nodes_to_connect:
             x, y = eval(self.flip_look_up[n])
             all_x_y.append([n, x, y])
+        if not all_x_y:
+            return
         n_all_x_y = np.array(all_x_y)
         tree = cKDTree(n_all_x_y[:,1:3])
         edge_conns = []
