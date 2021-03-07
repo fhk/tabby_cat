@@ -6,6 +6,7 @@ Part of the [broadband.cat](http://broadband.cat) open source broadband modellin
 # Run this
 
 ```
+sudo apt-get install libspatialindex-dev 
 git clone https://github.com/fhk/tabby_cat
 conda create -n tabby_cat python=3.7
 conda activate tabby_cat

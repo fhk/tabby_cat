@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="fhk",
+    name="tabby_cat",
     version="0.0.1",
     author="Fabion Kauker",
     author_email="f.kauker@gmail.com",
@@ -29,6 +29,8 @@ setuptools.setup(
         "click-plugins==1.1.1",
         "cligj==0.5.0",
         "cryptography==2.9.2",
+        "h3==3.7.1",
+        "geopandas==0.9.0",
         "idna==2.9",
         "munch==2.5.0",
         "networkx==2.4",
@@ -43,7 +45,8 @@ setuptools.setup(
         "python-dateutil==2.8.1",
         "pytz==2020.1",
         "requests==2.23.0",
-        "Rtree==0.9.4",
+        "Rtree==0.9.7",
+        "scipy==1.6.1",
         "Shapely==1.6.4.post1",
         "six==1.15.0",
         "soupsieve==2.0.1",
