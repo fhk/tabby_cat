@@ -265,7 +265,7 @@ class Processor():
         id_conn = OrderedDict()
         all_x_y = []
         for n in self.nodes_to_connect:
-            x, y = eval(self.flip_look_up[n])
+            x, y = eval(self.look_up[n])
             all_x_y.append([n, x, y])
         if not all_x_y:
             return
