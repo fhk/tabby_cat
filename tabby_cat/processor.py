@@ -350,6 +350,7 @@ class Processor():
         self.g.add_edges_from(self.edges)
 
         if not rerun:
+            self.convert_ids = {n: n for n in self.g}
             self.nodes_to_connect = set(n for n in self.demand_nodes if self.g.degree(n) == 1 and self.demand_nodes[n])
 
         self.add_inter_demand_connections(nearest_cost=nearest_cost)
