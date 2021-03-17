@@ -364,7 +364,7 @@ class Processor():
         self.edges = {**self.edges, **g_node_conn}
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
-        self.g = max(nx.connected_components(self.g), key=len)
+        largest_cc = max(nx.connected_components(self.g), key=len)
 
         if not rerun:
             self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
