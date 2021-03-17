@@ -356,7 +356,7 @@ class Processor():
             self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
             self.demand_nodes = defaultdict(int, {v:self.demand_nodes[self.flip_look_up[k]] for k, v in self.convert_ids.items()})
-            self.nodes_to_connect = set(n for n in self.demand_nodes if self.g.degree(self.flip_look_up[n]) == 1 and self.demand_nodes[n])
+            self.nodes_to_connect = set(n for n in self.demand_nodes if self.g.degree(n) == 1 and self.demand_nodes[n])
 
         self.add_inter_demand_connections(nearest_cost=nearest_cost)
         g_node_conn = self.add_graph_inter_demand_connections(
