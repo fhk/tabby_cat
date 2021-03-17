@@ -268,6 +268,8 @@ class Processor():
             x_y = self.look_up[n]
             if type(x_y) == str:
                 x, y = eval(x_y)
+            else:
+                x, y = x_y
             all_x_y.append([n, x, y])
         if not all_x_y:
             return
