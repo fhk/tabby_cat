@@ -265,7 +265,7 @@ class Processor():
         id_conn = OrderedDict()
         all_x_y = []
         for n in self.nodes_to_connect:
-            x_y = self.look_up[n]
+            x_y = self.flip_look_up[n]
             if type(x_y) == str:
                 x, y = eval(x_y)
             else:
@@ -357,7 +357,7 @@ class Processor():
             self.convert_ids = {n: n for n in self.g}
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
             self.nodes_to_connect = set(
-                n for n in self.demand_nodes if self.g.degree(self.look_up[n]) == 1 and self.demand_nodes[n])
+                self.look_up[n] for n in self.demand_nodes if self.g.degree(self.look_up[n]) == 1 and self.demand_nodes[n])
 
         self.add_inter_demand_connections(nearest_cost=nearest_cost)
         g_node_conn = self.add_graph_inter_demand_connections(
