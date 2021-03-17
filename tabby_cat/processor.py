@@ -348,7 +348,6 @@ class Processor():
 
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
-        largest_cc = max(nx.connected_components(self.g), key=len)
 
         if not rerun:
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
@@ -360,13 +359,17 @@ class Processor():
 
         self.add_inter_demand_connections(nearest_cost=nearest_cost)
         g_node_conn = self.add_graph_inter_demand_connections(
-            largest_cc,
+            self.g,
             traverse=traverse,
             node_gap=node_gap,
             two_edge_cost=two_edge_cost,
             four_edge_cost=four_edge_cost,
             n_edge_cost=n_edge_cost)
         self.edges = {**self.edges, **g_node_conn}
+        self.g = nx.Graph()
+        self.g.add_edges_from(self.edges)
+        self.g = max(nx.connected_components(self.g), key=len)
+
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
