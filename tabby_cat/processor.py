@@ -372,6 +372,7 @@ class Processor():
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
             self.demand_nodes = defaultdict(int, {v:self.demand_nodes[k] for k, v in self.convert_ids.items()})
+            self.nodes_to_connect = set(self.convert_ids[n] for n in self.nodes_to_connect)
 
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
@@ -385,8 +386,7 @@ class Processor():
                 LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt)]
                 for i, s in enumerate(s_edges)], columns=['id', 'start', 'end', 'geom'])
         s_frame['geom'] = s_frame.geom.apply(wkt.loads)
-        s_frame['type'] = s_frame.apply(
-            lambda x: 1 if (x.start in self.nodes_to_connect or x.end in self.nodes_to_connect) else 2, axis=1)
+        s_frame['type'] = s_frame.apply(lambda x: 1 if (x.start in self.nodes_to_connect or x.end in self.nodes_to_connect) else 2, axis=1)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
