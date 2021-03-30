@@ -356,7 +356,8 @@ class Processor():
         if not rerun:
             self.convert_ids = {n: n for n in self.g}
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
-            self.nodes_to_connect = set(self.look_up[k] for k, v in self.demand_nodes.items() if v)
+            self.nodes_to_connect = set(
+                self.look_up[k] for k, v in self.demand_nodes.items() if v and self.g.degree(self.look_up[k]) == 1)
             nodes_to_connect = copy.copy(self.nodes_to_connect)
         self.add_inter_demand_connections(nearest_cost=nearest_cost)
         g_node_conn = self.add_graph_inter_demand_connections(
