@@ -378,7 +378,7 @@ class Processor():
             self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
             self.demand_nodes = defaultdict(int, {v: self.demand_nodes[self.flip_look_up[v]] for k, v in self.convert_ids.items()})
-            self.nodes_to_connect = set(i for n, i in self.convert_ids.items() if n in self.nodes_to_connect)
+            self.nodes_to_connect = set(i for i in pr.convert_ids.values() if pr.demand_nodes[i])
 
         demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
