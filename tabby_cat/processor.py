@@ -358,7 +358,7 @@ class Processor():
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
             # HACK: Remove non snapped demand
             for k in self.demand_nodes:
-                if f not in self.look_up:
+                if k not in self.look_up:
                     del self.demand_nodes[k]
             self.nodes_to_connect = set(
                 self.look_up[k] for k, v in self.demand_nodes.items() if v and self.g.degree(self.look_up[k]) == 1)
