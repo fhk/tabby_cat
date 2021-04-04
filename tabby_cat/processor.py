@@ -357,7 +357,7 @@ class Processor():
             self.convert_ids = {n: n for n in self.g}
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
             # HACK: Remove non snapped demand
-            for k in self.demand_nodes:
+            for k in list(self.demand_nodes.keys()):
                 if k not in self.look_up:
                     del self.demand_nodes[k]
             self.nodes_to_connect = set(
