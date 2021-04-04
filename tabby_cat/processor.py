@@ -356,6 +356,10 @@ class Processor():
         if not rerun:
             self.convert_ids = {n: n for n in self.g}
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
+            # HACK: Remove non snapped demand
+            for k in demand_nodes:
+                if f not in self.look_up:
+                    del demand_nodes[k]
             self.nodes_to_connect = set(
                 self.look_up[k] for k, v in self.demand_nodes.items() if v and self.g.degree(self.look_up[k]) == 1)
             nodes_to_connect = copy.copy(self.nodes_to_connect)
