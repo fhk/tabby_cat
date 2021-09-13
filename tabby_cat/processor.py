@@ -159,7 +159,7 @@ class Processor():
 
     def get_demand_nodes(self, geometry):
         coords = geometry.coords[0]
-        coord_string = f'[{coords[0]:.0f}, {coords[1]:.0f}]'
+        coord_string = f'[{coords[0]:.6f}, {coords[1]:.6f}]'
         self.demand_nodes[coord_string] = 1
 
     def set_node_ids(self, geometry):
@@ -169,13 +169,13 @@ class Processor():
             coords = geometry.coords[:]
             s = coords[0]
             e = coords[-1]
-            s_coord_string = f'[{s[0]:.0f}, {s[1]:.0f}]'
+            s_coord_string = f'[{s[0]:.6f}, {s[1]:.6f}]'
             start = self.look_up.get(s_coord_string, None)
             if start is None:
                 self.look_up[s_coord_string] = self.index
                 start = self.index
                 self.index += 1
-            e_coord_string = f'[{e[0]:.0f}, {e[1]:.0f}]'
+            e_coord_string = f'[{e[0]:.6f}, {e[1]:.6f}]'
             end = self.look_up.get(e_coord_string, None)
             if end is None:
                 self.look_up[e_coord_string] = self.index
@@ -188,13 +188,13 @@ class Processor():
                 coords = line.coords[:]
                 s = coords[0]
                 e = coords[-1]
-                s_coord_string = f'[{s[0]:.0f}, {s[1]:.0f}]'
+                s_coord_string = f'[{s[0]:.6f}, {s[1]:.6f}]'
                 start = self.look_up.get(s_coord_string, None)
                 if start is None:
                     self.look_up[s_coord_string] = self.index
                     start = self.index
                     self.index += 1
-                e_coord_string = f'[{e[0]:.0f}, {e[1]:.0f}]'
+                e_coord_string = f'[{e[0]:.6f}, {e[1]:.6f}]'
                 end = self.look_up.get(e_coord_string, None)
                 if end is None:
                     self.look_up[e_coord_string] = self.index
@@ -301,8 +301,8 @@ class Processor():
 
         for i, line in enumerate(test_lines.geometry):
             demand, node = line.coords[:]
-            s_coord_string = f'[{demand[0]:.0f}, {demand[1]:.0f}]'
-            e_coord_string = f'[{node[0]:.0f}, {node[1]:.0f}]'
+            s_coord_string = f'[{demand[0]:.6f}, {demand[1]:.6f}]'
+            e_coord_string = f'[{node[0]:.6f}, {node[1]:.6f}]'
 
             end = self.look_up.get(e_coord_string, None)
             start = self.look_up.get(s_coord_string, None)
