@@ -377,11 +377,12 @@ class Processor():
         s_frame['type'] = s_frame.apply(lambda x: 1 if (x.start in demand_end_points) else 2, axis=1)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
-        base_graph = pd.DataFrame([[i,s[0], s[1],
-            self.edge_to_geom.get(
-                (s[0], s[1]),
+        base_graph = pd.DataFrame([[i, s[0], s[1],
+            self.edge_to_geom.get((
+                self.convert_ids[s[0]],
+                self.convert_ids[s[1]]),
                 LineString([eval(self.flip_look_up[self.convert_ids[s[0]]]), eval(self.flip_look_up[self.convert_ids[s[1]]])]).wkt)]
-                for i, s in enumerate(self.g.edges()) if s[0] in largest_cc)], columns=['id', 'start', 'end', 'geom'])
+                for i, s in enumerate(self.g.edges()) if s[0] in self.largest_cc], columns=['id', 'start', 'end', 'geom'])
         base_graph['geom'] = base_graph.geom.apply(wkt.loads)
         self.base_graph = gpd.GeoDataFrame(base_graph, geometry='geom', crs='epsg:3857')
 
