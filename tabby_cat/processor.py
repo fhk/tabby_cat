@@ -340,63 +340,41 @@ class Processor():
             self.edges[(start, end)] = line.length
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
-    def geom_to_graph(self, rerun=False, traverse=3, node_gap=9, two_edge_cost=1000,
-            four_edge_cost=1000, n_edge_cost=1000, nearest_cost=1000):
-        if not self.edges:
-            self.cut_lines = self.cut_lines.dropna()
-            self.cut_lines.geometry = self.cut_lines.geometry.apply(lambda x: self.expand_lines(x))
-            self.lines.geometry = self.lines.geometry.apply(lambda x: self.expand_lines(x))
-            self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
-            self.lines.geometry.apply(lambda x: self.set_node_ids(x))
-            self.snap_lines.geometry.apply(lambda x: self.set_node_ids(x))
+    def geom_to_graph(self):
+
+        self.cut_lines = self.cut_lines.dropna()
+        self.cut_lines.geometry = self.cut_lines.geometry.apply(lambda x: self.expand_lines(x))
+        self.lines.geometry = self.lines.geometry.apply(lambda x: self.expand_lines(x))
+        self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
+        self.lines.geometry.apply(lambda x: self.set_node_ids(x))
+        self.max_non_demand_id = self.index
+        self.snap_lines.geometry.apply(lambda x: self.set_node_ids(x))
 
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
 
-        if not rerun:
-            self.convert_ids = {n: n for n in self.g}
-            self.flip_look_up = {v: k for k, v in self.look_up.items()}
-            # HACK: Remove non snapped demand
-            for k in list(self.demand_nodes.keys()):
-                if k not in self.look_up:
-                    del self.demand_nodes[k]
-            self.nodes_to_connect = set(
-                self.look_up[k] for k, v in self.demand_nodes.items() if v and self.g.degree(self.look_up[k]) == 1)
-            nodes_to_connect = copy.copy(self.nodes_to_connect)
-        self.add_inter_demand_connections(nearest_cost=nearest_cost)
-        g_node_conn = self.add_graph_inter_demand_connections(
-            self.g,
-            traverse=traverse,
-            node_gap=node_gap,
-            two_edge_cost=two_edge_cost,
-            four_edge_cost=four_edge_cost,
-            n_edge_cost=n_edge_cost)
-        self.edges = {**self.edges, **g_node_conn}
-        self.g = nx.Graph()
-        self.g.add_edges_from(self.edges)
         largest_cc = max(nx.connected_components(self.g), key=len)
 
-        if not rerun:
-            self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
-            self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
-            self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
-            self.flip_look_up = {v: k for k, v in self.look_up.items()}
-            self.demand_nodes = defaultdict(int, {v: self.demand_nodes[self.flip_look_up[v]] for k, v in self.convert_ids.items()})
-            self.nodes_to_connect = set(n for n in nodes_to_connect if n in largest_cc)
+        self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
+        self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
+        self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
+        self.flip_look_up = {v: k for k, v in self.look_up.items()}
+        self.demand_nodes = defaultdict(int, {v: self.demand_nodes[self.flip_look_up[v]] for k, v in self.convert_ids.items()})
 
-        demand_not_on_graph = len(self.demand) - len(self.demand_nodes)
+        demand_not_on_graph = len(self.demand) - sum(self.demand_nodes.values())
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
     def graph_to_geom(self, s_edges):
         edge_keys = list(self.edges)
         flip_node = {v:k for k, v in self.convert_ids.items()}
+        demand_end_points = {self.convert_ids[n] for n in range(self.max_non_demand_id, self.index) if self.convert_ids.get(n, False)}
         s_frame = pd.DataFrame([[i,edge_keys[s][0], edge_keys[s][1],
             self.edge_to_geom.get(
                 (flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]),
                 LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt)]
                 for i, s in enumerate(s_edges)], columns=['id', 'start', 'end', 'geom'])
         s_frame['geom'] = s_frame.geom.apply(wkt.loads)
-        s_frame['type'] = s_frame.apply(lambda x: 1 if (x.start in self.nodes_to_connect or x.end in self.nodes_to_connect) else 2, axis=1)
+        s_frame['type'] = s_frame.apply(lambda x: 1 if (x.start in demand_end_points) else 2, axis=1)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
