@@ -377,6 +377,14 @@ class Processor():
         s_frame['type'] = s_frame.apply(lambda x: 1 if (x.start in demand_end_points) else 2, axis=1)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
 
+        base_graph = pd.DataFrame([[i,edge_keys[s][0], edge_keys[s][1],
+            self.edge_to_geom.get(
+                (flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]),
+                LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt)]
+                for i, s in enumerate(self.edges)], columns=['id', 'start', 'end', 'geom'])
+        s_frame['geom'] = s_frame.geom.apply(wkt.loads)
+        self.base_graph = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
+
     def load_intermediate(self):
         with open(f'{self.where}/output/demand_nodes.pickle', 'rb') as handle:
             self.demand_nodes = pickle.load(handle)
