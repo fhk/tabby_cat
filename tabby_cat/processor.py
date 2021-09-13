@@ -352,6 +352,14 @@ class Processor():
 
         self.g = nx.Graph()
         self.g.add_edges_from(self.edges)
+        sub_graphs = [self.g.subgraph(c).copy() for c in nx.connected_components(self.g)] 
+        self.flip_look_up = {v: k for k, v in self.look_up.items()}
+        base_graph = pd.DataFrame([[i, s[0], s[1], cc,
+            self.edge_to_geom.get((s[0], s[1]),
+                LineString([eval(self.flip_look_up[s[0]]), eval(self.flip_look_up[s[1]])]).wkt)]
+                for cc, s_g in enumerate(sub_graphs) for i, s in enumerate(s_g.edges())], columns=['id', 'start', 'end', 'cc', 'geom'])
+        base_graph['geom'] = base_graph.geom.apply(wkt.loads)
+        self.base_graph = gpd.GeoDataFrame(base_graph, geometry='geom', crs='epsg:3857')
 
         largest_cc = max(nx.connected_components(self.g), key=len)
 
@@ -376,15 +384,6 @@ class Processor():
         s_frame['geom'] = s_frame.geom.apply(wkt.loads)
         s_frame['type'] = s_frame.apply(lambda x: 1 if (x.start in demand_end_points) else 2, axis=1)
         self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
-
-        base_graph = pd.DataFrame([[i, s[0], s[1],
-            self.edge_to_geom.get((
-                self.convert_ids[s[0]],
-                self.convert_ids[s[1]]),
-                LineString([eval(self.flip_look_up[self.convert_ids[s[0]]]), eval(self.flip_look_up[self.convert_ids[s[1]]])]).wkt)]
-                for i, s in enumerate(self.g.edges()) if s[0] in self.largest_cc], columns=['id', 'start', 'end', 'geom'])
-        base_graph['geom'] = base_graph.geom.apply(wkt.loads)
-        self.base_graph = gpd.GeoDataFrame(base_graph, geometry='geom', crs='epsg:3857')
 
     def load_intermediate(self):
         with open(f'{self.where}/output/demand_nodes.pickle', 'rb') as handle:
