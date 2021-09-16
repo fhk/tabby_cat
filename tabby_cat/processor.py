@@ -112,20 +112,19 @@ class Processor():
     def cut(self, loc, line, distance):
     # Cuts a line in two at a distance from its starting point
         if distance.loc[loc] <= 0.0 or distance.loc[loc] >= line.length:
-            return [line]
+            return line
         coords = list(line.coords)
         for i, p in enumerate(coords):
             pd = line.project(Point(p))
             if pd == distance.loc[loc]:
                 return MultiLineString(
-                    [LineString([coords[:i+1]]),
-                    LineString([coords[i:]])])
+                    [LineString(coords[:i+1]),
+                    LineString(coords[i:])])
             if pd > distance.loc[loc]:
                 cp = line.interpolate(distance.loc[loc])
                 return MultiLineString(
                     [LineString(coords[:i] + [(cp.x, cp.y)]),
                     LineString([(cp.x, cp.y)] + coords[i:])])
-
 
     def snap_points_to_line(self, lines, points, write=True):
         """
