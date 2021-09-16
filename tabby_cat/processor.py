@@ -117,14 +117,15 @@ class Processor():
         for i, p in enumerate(coords):
             pd = line.project(Point(p))
             if pd == distance.loc[loc]:
-                return [
-                    LineString(coords[:i+1]),
-                    LineString(coords[i:])]
+                return MultiLineString(
+                    [LineString([coords[:i+1]]),
+                    LineString([coords[i:]])])
             if pd > distance.loc[loc]:
                 cp = line.interpolate(distance.loc[loc])
-                return [
-                    LineString(coords[:i] + [(cp.x, cp.y)]),
-                    LineString([(cp.x, cp.y)] + coords[i:])]
+                return MultiLineString(
+                    [LineString(coords[:i] + [(cp.x, cp.y)]),
+                    LineString([(cp.x, cp.y)] + coords[i:])])
+
 
     def snap_points_to_line(self, lines, points, write=True):
         """
@@ -156,8 +157,9 @@ class Processor():
         snapped = gpd.GeoDataFrame(
             closest[line_columns], geometry=new_pts, crs="epsg:3857")
         closest['snapped'] = snapped.geometry
-        self.cut_lines = closest['geometry']
- 
+        closest_cut = closest.copy()
+        closest_cut['geometry'] = closest['new_line']
+        self.cut_lines = closest_cut
         # Join back to the original points:
         updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
