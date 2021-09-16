@@ -51,6 +51,6 @@ setuptools.setup(
         "Shapely==1.6.4.post1",
         "six==1.15.0",
         "soupsieve==2.0.1",
-        "urllib3==1.25.8",
+        "urllib3==1.26.5",
     ],
 )
