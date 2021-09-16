@@ -42,6 +42,7 @@ setuptools.setup(
         "pyOpenSSL==19.1.0",
         "pyproj==2.6.1.post1",
         "PySocks==1.7.1",
+        "pytest==6.2.5",
         "python-dateutil==2.8.1",
         "pytz==2020.1",
         "requests==2.23.0",

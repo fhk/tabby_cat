@@ -44,15 +44,17 @@ class Processor():
         """
         cpus = 4 # mp.cpu_count()
         
-        intersection_chunks = np.array_split(points, cpus)
-        
-        pool = mp.Pool(processes=cpus)
-        
-        chunk_processes = [pool.apply_async(self._snap_part, args=(chunk, lines)) for chunk in intersection_chunks]
+        if len(points) > cpus:
+            intersection_chunks = np.array_split(points, cpus)
+            pool = mp.Pool(processes=cpus)
+            
+            chunk_processes = [pool.apply_async(self._snap_part, args=(chunk, lines)) for chunk in intersection_chunks]
 
-        intersection_results = [chunk.get() for chunk in chunk_processes]
-        
-        intersections_dist = pd.concat(intersection_results)
+            intersection_results = [chunk.get() for chunk in chunk_processes]
+            
+            intersections_dist = pd.concat(intersection_results)
+        else:
+            intersections_dist = self._snap_part(points, lines)
 
         return intersections_dist
 
@@ -95,7 +97,7 @@ class Processor():
             coords.add(p.coords[0])
             self.demand.add(p.coords[0])
 
-        return data.geometry.iloc[0].difference(MultiPoint(list(coords)).buffer(1e-7))
+        return data.geometry.iloc[0].difference(MultiPoint(list(coords)).buffer(1))
 
     def project_array(self, coordinates):
         """
