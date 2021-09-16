@@ -13,8 +13,8 @@ import geopandas as gpd
 import multiprocessing as mp
 import networkx as nx
 from shapely import wkt
-from shapely.ops import split
-from shapely.geometry import LineString, MultiPoint, MultiLineString
+from shapely.ops import split, snap
+from shapely.geometry import LineString, Point, MultiPoint, MultiLineString
 from pyproj import Proj, transform
 from scipy.spatial import cKDTree
 import h3
@@ -97,7 +97,7 @@ class Processor():
             coords.add(p.coords[0])
             self.demand.add(p.coords[0])
 
-        return data.geometry.iloc[0].difference(MultiPoint(list(coords)).buffer(1))
+        return data.geometry.iloc[0].difference(MultiPoint(list(coords)).buffer(0))
 
     def project_array(self, coordinates):
         """
@@ -108,6 +108,23 @@ class Processor():
         fx, fy = pyproj.transform(self.inProj, self.outProj, coordinates[:,0], coordinates[:,1])
         # Re-create (n,2) coordinates
         return np.dstack([fx, fy])[0]
+
+    def cut(self, loc, line, distance):
+    # Cuts a line in two at a distance from its starting point
+        if distance.loc[loc] <= 0.0 or distance.loc[loc] >= line.length:
+            return [line]
+        coords = list(line.coords)
+        for i, p in enumerate(coords):
+            pd = line.project(Point(p))
+            if pd == distance.loc[loc]:
+                return [
+                    LineString(coords[:i+1]),
+                    LineString(coords[i:])]
+            if pd > distance.loc[loc]:
+                cp = line.interpolate(distance.loc[loc])
+                return [
+                    LineString(coords[:i] + [(cp.x, cp.y)]),
+                    LineString([(cp.x, cp.y)] + coords[i:])]
 
     def snap_points_to_line(self, lines, points, write=True):
         """
@@ -129,15 +146,17 @@ class Processor():
         pos = closest.geometry.project(series)
         # Get new point location geometry
         new_pts = closest.geometry.interpolate(pos)
+
+        # Get new point location geometry
+        closest['new_line'] = closest.apply(lambda x: self.cut(x.name, x.geometry, pos), axis=1)
+
         # Identify the columns we want to copy from the closest line to the point, such as a line ID.
         line_columns = ['line_i', 'osm_id', 'code', 'fclass']
         # Create a new GeoDataFrame from the columns from the closest line and new point geometries (which will be called "geometries")
         snapped = gpd.GeoDataFrame(
             closest[line_columns], geometry=new_pts, crs="epsg:3857")
         closest['snapped'] = snapped.geometry
-        split_lines = closest.groupby(closest["line_i"]).apply(lambda x: self.points_to_multipoint(x))
-        split_lines_df = pd.DataFrame({"geom": split_lines}, index=[i for i in range(len(split_lines))])
-        self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
+        self.cut_lines = closest['geometry']
  
         # Join back to the original points:
         updated_points = points.drop(columns=["geometry"]).join(snapped)
