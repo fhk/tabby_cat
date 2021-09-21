@@ -126,6 +126,19 @@ class Processor():
                     [LineString(coords[:i] + [(cp.x, cp.y)]),
                     LineString([(cp.x, cp.y)] + coords[i:])])
 
+    def expand_multilinestrings(self, lines):
+        og_lines = lines.copy()
+
+        for i, r in og_lines.iterrows():
+            if r.geometry.type == 'MultiLineString':
+                lines = lines.drop([r.name])
+                for line in r.geometry:
+                    coords = line.coords[:]
+                    for i in range(len(coords) - 1):
+                        r.geometry = LineString([coords[i], coords[i + 1]])
+                        lines = lines.append(r)
+        return lines
+
     def snap_points_to_line(self, lines, points, write=True):
         """
         Taken from here: https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
@@ -159,6 +172,7 @@ class Processor():
         closest_cut = closest.copy()
         closest_cut['geometry'] = closest['new_line']
         self.cut_lines = closest_cut
+        self.cut_lines = self.expand_multilinestrings(self.cut_lines)
         # Join back to the original points:
         updated_points = points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
