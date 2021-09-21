@@ -18,7 +18,7 @@ def test_snapping():
     p = Processor('test')
     p.snap_points_to_line(lines, points, write=False)
 
-    assert len(p.cut_lines) == 2
+    assert len(p.cut_lines) == 1
 
 
 def test_snapping_more_treads():
@@ -37,7 +37,7 @@ def test_snapping_more_treads():
     p = Processor('test')
     p.snap_points_to_line(lines, points, write=False)
 
-    assert len(p.cut_lines) == 2
+    assert len(p.cut_lines) == 5
 
 
 
@@ -78,7 +78,7 @@ def test_points_to_multipoint():
 
 def test_points_to_multipoint_two_lines():
     points = gpd.GeoDataFrame(
-        {'geometry': [Point(0.5, 0.5)]}, geometry='geometry', crs='epsg:3857')
+        {'geometry': [Point(1.5, 1.5)]}, geometry='geometry', crs='epsg:3857')
     lines = gpd.GeoDataFrame(
         {'line_i': 1, 'id': 1, 'osm_id': 1, 'code': '', 'fclass': '',
          'geometry': [LineString([[1, 1], [2, 2]])]}, geometry='geometry', crs='epsg:3857')
