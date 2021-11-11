@@ -389,7 +389,7 @@ class Processor():
         self.snap_lines.geometry.apply(lambda x: self.set_node_ids(x))
 
         self.g = nx.Graph()
-        self.g.add_edges_from(self.edges, weight=self.edges.values())
+        self.g.add_edges_from((u, v, {"length": d}) for (u, v), d in self.edges.items())
 
         sub_graphs = [self.g.subgraph(c).copy() for c in nx.connected_components(self.g)] 
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
@@ -416,7 +416,7 @@ class Processor():
 
         graph_json = json_graph.node_link_data(self.g)
         with open('graph_for_solver.json', 'w') as og:
-            og.write(str(graph_json))
+            json.dump(graph_json, og)
 
         self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
         self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
