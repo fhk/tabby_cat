@@ -6,12 +6,14 @@ import pickle
 import logging
 import copy
 from collections import OrderedDict, defaultdict
+import json
 
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import multiprocessing as mp
 import networkx as nx
+from networkx.readwrite import json_graph
 from shapely import wkt
 from shapely.ops import split, snap
 from shapely.geometry import LineString, Point, MultiPoint, MultiLineString
@@ -387,7 +389,8 @@ class Processor():
         self.snap_lines.geometry.apply(lambda x: self.set_node_ids(x))
 
         self.g = nx.Graph()
-        self.g.add_edges_from(self.edges)
+        self.g.add_edges_from(self.edges, weight=self.edges.values())
+
         sub_graphs = [self.g.subgraph(c).copy() for c in nx.connected_components(self.g)] 
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
         base_graph = pd.DataFrame([[i, s[0], s[1], cc,
@@ -399,10 +402,28 @@ class Processor():
 
         largest_cc = max(nx.connected_components(self.g), key=len)
 
+        for s, e in self.g.edges():
+            line = base_graph[(base_graph['start'] == s) & (base_graph['end'] == e)]
+            if line.empty:
+                line = base_graph[(base_graph['start'] == e) & (base_graph['end'] == s)]
+            self.g.edges[s, e]['geom'] = line.iloc[0].geom.wkt
+
+        for n in self.g.nodes():
+            self.g.nodes[n]['coords'] = self.flip_look_up[n]
+
+        for n, d in self.demand_nodes.items():
+            self.g.nodes[self.look_up[n]]['demand'] = d
+
+        graph_json = json_graph.node_link_data(self.g)
+        with open('graph_for_solver.json', 'w') as og:
+            og.write(str(graph_json))
+
         self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
         self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
         self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
+
+
         self.demand_nodes = defaultdict(int, {v: self.demand_nodes[self.flip_look_up[v]] for k, v in self.convert_ids.items()})
 
         demand_not_on_graph = len(self.demand) - sum(self.demand_nodes.values())
