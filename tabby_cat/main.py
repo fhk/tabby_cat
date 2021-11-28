@@ -34,7 +34,7 @@ def main():
     logging.info("Converting GIS to graph")
     pr.geom_to_graph()
     logging.info("Writing intermediate files")
-    pr.store_intermediate()
+    #pr.store_intermediate()
 
     logging.info("Create solver")
     sl = PCSTSolver(pr.edges, pr.look_up, pr.demand_nodes)

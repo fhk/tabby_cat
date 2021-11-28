@@ -46,17 +46,15 @@ class Processor():
         """
         cpus = 4 # mp.cpu_count()
         
-        if len(points) > cpus:
-            intersection_chunks = np.array_split(points, cpus)
-            pool = mp.Pool(processes=cpus)
-            
-            chunk_processes = [pool.apply_async(self._snap_part, args=(chunk, lines)) for chunk in intersection_chunks]
+        intersection_chunks = np.array_split(points, cpus)
+        
+        pool = mp.Pool(processes=cpus)
+        
+        chunk_processes = [pool.apply_async(self._snap_part, args=(chunk, lines)) for chunk in intersection_chunks]
 
-            intersection_results = [chunk.get() for chunk in chunk_processes]
-            
-            intersections_dist = pd.concat(intersection_results)
-        else:
-            intersections_dist = self._snap_part(points, lines)
+        intersection_results = [chunk.get() for chunk in chunk_processes]
+        
+        intersections_dist = pd.concat(intersection_results)
 
         return intersections_dist
 
@@ -161,30 +159,35 @@ class Processor():
         pos = closest.geometry.project(series)
         # Get new point location geometry
         new_pts = closest.geometry.interpolate(pos)
-
-        # Get new point location geometry
-        closest['new_line'] = closest.apply(lambda x: self.cut(x.name, x.geometry, pos), axis=1)
-
         # Identify the columns we want to copy from the closest line to the point, such as a line ID.
         line_columns = ['line_i', 'osm_id', 'code', 'fclass']
         # Create a new GeoDataFrame from the columns from the closest line and new point geometries (which will be called "geometries")
         snapped = gpd.GeoDataFrame(
             closest[line_columns], geometry=new_pts, crs="epsg:3857")
         closest['snapped'] = snapped.geometry
-        closest_cut = closest.copy()
-        closest_cut['geometry'] = closest['new_line']
-        self.cut_lines = closest_cut
-        self.cut_lines = self.expand_multilinestrings(self.cut_lines)
+
+        split_lines = []
+        lines_and_points = closest.groupby(closest["line_i"])
+        for g, data in lines_and_points:
+            split_lines.append(self.points_to_multipoint(data))
+
+        split_lines_df = pd.DataFrame({"geom": split_lines}, index=[i for i in range(len(split_lines))])
+        self.cut_lines = gpd.GeoDataFrame(split_lines_df, geometry="geom", crs="epsg:3857")
+
         # Join back to the original points:
-        updated_points = points.drop(columns=["geometry"]).join(snapped)
+        points['x1'] = points['geometry'].x
+        points['y1'] = points['geometry'].y
+        updated_points = points.copy()
+        updated_points = updated_points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
         updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
-        points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
-        self.snap_lines = closest.apply(lambda x: LineString([x.point.coords[0], x.snapped.coords[0]]), axis=1)
-        self.snap_lines = pd.DataFrame({"geom": self.snap_lines}, index=[i for i in range(len(self.snap_lines))])
-        self.snap_lines = gpd.GeoDataFrame(self.snap_lines, geometry="geom", crs="epsg:3857")
-        self.snap_lines = self.snap_lines.dropna()
-        self.snap_lines['length'] = self.snap_lines.apply(lambda x: x.geom.length, axis=1)
+        updated_points['x2'] = updated_points['geometry'].x
+        updated_points['y2'] = updated_points['geometry'].y
+        snap_gdf = updated_points.copy()
+        snap_gdf['geometry'] = snap_gdf.apply(lambda x: LineString(((x['x1'], x['y1']), (x['x2'], x['y2']))), axis=1)
+        snap_gdf['length'] = snap_gdf.geometry.length
+        updated_points = updated_points.drop(columns=['x1', 'y1', 'x2', 'y2'])
+        self.snap_lines = snap_gdf.drop(columns=['x1', 'y1', 'x2', 'y2'])
         if write:
             if not os.path.isdir(f"{self.where}/output"):
                 os.mkdir(f"{self.where}/output")
@@ -379,14 +382,13 @@ class Processor():
         self.flip_look_up = {v: k for k, v in self.look_up.items()}
 
     def geom_to_graph(self):
-
-        self.cut_lines = self.cut_lines.dropna()
-        self.cut_lines.geometry = self.cut_lines.geometry.apply(lambda x: self.expand_lines(x))
-        self.lines.geometry = self.lines.geometry.apply(lambda x: self.expand_lines(x))
-        self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
-        self.lines.geometry.apply(lambda x: self.set_node_ids(x))
+        if self.cut_lines is not None:
+            self.cut_lines = self.cut_lines.dropna()
+            self.cut_lines.geometry = self.cut_lines.geometry.apply(lambda x: self.expand_lines(x))
+            self.lines.geometry = self.lines.geometry.apply(lambda x: self.expand_lines(x))
+            self.cut_lines.geometry.apply(lambda x: self.set_node_ids(x))
+            self.lines.geometry.apply(lambda x: self.set_node_ids(x))
         self.max_non_demand_id = self.index
-        self.snap_lines.geometry.apply(lambda x: self.set_node_ids(x))
 
         self.g = nx.Graph()
         self.g.add_edges_from((u, v, {"length": d}) for (u, v), d in self.edges.items())
@@ -401,6 +403,9 @@ class Processor():
         self.base_graph = gpd.GeoDataFrame(base_graph, geometry='geom', crs='epsg:3857')
 
         largest_cc = max(nx.connected_components(self.g), key=len)
+        self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
+        # TODO: is this needed?
+        #self.add_test_line_edges(self.snap_lines)
 
         for s, e in self.g.edges():
             line = base_graph[(base_graph['start'] == s) & (base_graph['end'] == e)]
@@ -412,13 +417,14 @@ class Processor():
             self.g.nodes[n]['coords'] = self.flip_look_up[n]
 
         for n, d in self.demand_nodes.items():
-            self.g.nodes[self.look_up[n]]['demand'] = d
+            # TODO: fix missing key
+            if n in self.look_up:
+                self.g.nodes[self.look_up[n]]['demand'] = d
 
         graph_json = json_graph.node_link_data(self.g)
         with open('graph_for_solver.json', 'w') as og:
             json.dump(graph_json, og)
 
-        self.convert_ids = {n: i for i, n in enumerate(largest_cc)}
         self.edges = OrderedDict(((self.convert_ids[k[0]], self.convert_ids[k[1]]), v) for k, v in self.edges.items() if k[0] in largest_cc)
         self.look_up = {k:self.convert_ids[v] for k, v in self.look_up.items() if v in largest_cc}    
         self.flip_look_up = {v: k for k, v in self.look_up.items()}

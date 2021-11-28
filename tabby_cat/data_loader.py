@@ -205,6 +205,8 @@ class DataLoader():
             "service"])]
 
     def read_address_data(self, region):
+        if self.add_files == []:
+            self.add_files = [f'{region}/{region}.geojson']
         for file_name in self.add_files:
             if file_name[-3:] == 'csv':
                 df = self.read_csv(file_name)
