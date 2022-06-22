@@ -34,7 +34,7 @@ setuptools.setup(
         "idna==2.9",
         "munch==2.5.0",
         "networkx==2.4",
-        "numpy==1.18.1",
+        "numpy==1.22.0",
         "pandas==1.0.3",
         "pcst-fast==1.0.7",
         "pybind11==2.5.0",
