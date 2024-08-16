@@ -5,22 +5,34 @@ import os
 import pickle
 import logging
 import copy
-from collections import OrderedDict, defaultdict
 import json
+import pyproj
+import configparser
+import shapely
+import h3
 
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import multiprocessing as mp
 import networkx as nx
-from networkx.readwrite import json_graph
+
+from scipy.spatial import KDTree 
 from shapely import wkt
 from shapely.ops import split, snap
-from shapely.geometry import LineString, Point, MultiPoint, MultiLineString
 from pyproj import Proj, transform
 from scipy.spatial import cKDTree
-import h3
+from networkx.readwrite import json_graph
+from collections import OrderedDict, defaultdict
+from shapely.geometry import LineString, Point, MultiPoint, MultiLineString
 
+CONFIG = configparser.ConfigParser()
+CONFIG.read(os.path.join(os.path.dirname(__file__), 'script_config.ini'))
+BASE_PATH = CONFIG['file_locations']['base_path']
+
+DATA_RAW = os.path.join(BASE_PATH, 'raw')
+DATA_PROCESSED = os.path.join(BASE_PATH, '..', 'results', 'processed')
+DATA_PROCESSED = os.path.join(BASE_PATH, '..', 'results', 'final')
 
 class Processor():
     def __init__(self, where):
@@ -160,7 +172,7 @@ class Processor():
         # Get new point location geometry
         new_pts = closest.geometry.interpolate(pos)
         # Identify the columns we want to copy from the closest line to the point, such as a line ID.
-        line_columns = ['line_i', 'osm_id', 'code', 'fclass']
+        line_columns = ['highway', 'length']
         # Create a new GeoDataFrame from the columns from the closest line and new point geometries (which will be called "geometries")
         snapped = gpd.GeoDataFrame(
             closest[line_columns], geometry=new_pts, crs="epsg:3857")
@@ -180,7 +192,11 @@ class Processor():
         updated_points = points.copy()
         updated_points = updated_points.drop(columns=["geometry"]).join(snapped)
         # You may want to drop any that didn't snap, if so: 
-        updated_points.dropna(subset=["geometry"]).geometry.apply(lambda x: self.get_demand_nodes(x))
+
+        updated_points = gpd.GeoDataFrame(updated_points, geometry="geometry", crs="epsg:3857")
+        updated_points = updated_points.dropna(subset=["geometry"])
+        updated_points.geometry.apply(lambda x: self.get_demand_nodes(x))
+
         updated_points['x2'] = updated_points['geometry'].x
         updated_points['y2'] = updated_points['geometry'].y
         snap_gdf = updated_points.copy()
@@ -188,19 +204,25 @@ class Processor():
         snap_gdf['length'] = snap_gdf.geometry.length
         updated_points = updated_points.drop(columns=['x1', 'y1', 'x2', 'y2'])
         self.snap_lines = snap_gdf.drop(columns=['x1', 'y1', 'x2', 'y2'])
+        folder_out = os.path.join(BASE_PATH, '..', 'results', 'final')
+        fileout = 'updated.shp'
         if write:
-            if not os.path.isdir(f"{self.where}/output"):
-                os.mkdir(f"{self.where}/output")
-            updated_points.to_file(f"{self.where}/output/updated.shp")
+            if not os.path.exists(folder_out):
+
+                os.mkdir(folder_out)
+
+            path_out = os.path.join(folder_out, fileout)
+            updated_points.to_file(path_out)
             snap_gdf = self.snap_lines.to_crs('epsg:4326')
             snap_gdf['lat'] = snap_gdf.geometry.apply(lambda x: x.coords[0][0])
             snap_gdf['lon'] = snap_gdf.geometry.apply(lambda x: x.coords[0][1])
-            snap_gdf[["lat", "lon", "length"]].to_csv(f"{self.where}/output/connections.csv")
-            snap_gdf.to_file(f"{self.where}/output/test_lines.shp")
+            snap_gdf[['iso3', 'GID_2', "lat", "lon", "length"]].to_csv(f"{folder_out}/connections.csv")
+            snap_gdf.to_file(f"{folder_out}/test_lines.shp")
 
     def get_demand_nodes(self, geometry):
         coords = geometry.coords[0]
         coord_string = f'[{coords[0]:.0f}, {coords[1]:.0f}]'
+
         self.demand_nodes[coord_string] = 1
 
     def set_node_ids(self, geometry):
@@ -225,7 +247,7 @@ class Processor():
             self.edges[(start, end)] = geometry.length
             self.edge_to_geom[(start, end)] = geometry.wkt
         else:
-            for line in geometry:
+            for line in list(geometry.geoms):
                 coords = line.coords[:]
                 s = coords[0]
                 e = coords[-1]
@@ -251,7 +273,8 @@ class Processor():
             for i in range(len(coords) - 1):
                 new_lines.append([coords[i], coords[i + 1]])
         else:
-            for sub_geom in geom:
+            # Note this changed: https://shapely.readthedocs.io/en/stable/reference/shapely.MultiLineString.html
+            for sub_geom in list(geom.geoms):
                 coords = sub_geom.coords[:]
                 for i in range(len(coords) - 1):
                     new_lines.append([coords[i], coords[i + 1]])
@@ -416,10 +439,25 @@ class Processor():
         for n in self.g.nodes():
             self.g.nodes[n]['coords'] = self.flip_look_up[n]
 
+        # HACK - this may get slow on large regions
+        # Need to redo the graph snapping and creation to have a tolerance
+        # assume order will be the same
+        tree = KDTree(np.array([eval(d['coords']) for _, d in self.g.nodes(data=True)]))
+        node_i_to_coords = {i: (n, d['coords']) for i, (n, d) in enumerate(self.g.nodes(data=True))}
+
+        new_demand_nodes = {}
         for n, d in self.demand_nodes.items():
-            # TODO: fix missing key
+            # [HACK DONE] TODO: fix missing key
             if n in self.look_up:
+
                 self.g.nodes[self.look_up[n]]['demand'] = d
+            else:
+                result = tree.query(np.array(eval(n)))
+                self.g.nodes[node_i_to_coords[result[1]][0]]['demand'] = d
+                new_demand_nodes[node_i_to_coords[result[1]][1]] = d
+                self.flip_look_up[node_i_to_coords[result[1]][0]] = node_i_to_coords[result[1]][1]
+
+        self.demand_nodes.update(new_demand_nodes)
 
         graph_json = json_graph.node_link_data(self.g)
         with open('graph_for_solver.json', 'w') as og:
@@ -436,48 +474,62 @@ class Processor():
         logging.info(f"Missing {demand_not_on_graph} points on connected graph")
 
     def graph_to_geom(self, s_edges):
+
         edge_keys = list(self.edges)
         flip_node = {v:k for k, v in self.convert_ids.items()}
         demand_end_points = {self.convert_ids[n] for n in range(self.max_non_demand_id, self.index) if self.convert_ids.get(n, False)}
+
         s_frame = pd.DataFrame([[i,edge_keys[s][0], edge_keys[s][1],
             self.edge_to_geom.get(
                 (flip_node[edge_keys[s][0]], flip_node[edge_keys[s][1]]),
                 LineString([eval(self.flip_look_up[edge_keys[s][0]]), eval(self.flip_look_up[edge_keys[s][1]])]).wkt)]
-                for i, s in enumerate(s_edges)], columns=['id', 'start', 'end', 'geom'])
-        s_frame['geom'] = s_frame.geom.apply(wkt.loads)
-        s_frame['type'] = s_frame.apply(lambda x: 1 if (x.start in demand_end_points) else 2, axis=1)
-        self.solution = gpd.GeoDataFrame(s_frame, geometry='geom', crs='epsg:3857')
+                for i, s in enumerate(s_edges)], columns = ['id', 'start', 'end', 'geom'])
+        s_frame['geom'] = s_frame['geom'].apply(lambda x: shapely.wkt.loads(x))
+        #s_frame['geom'] = s_frame.geom.apply(wkt.loads)
+        s_frame['type'] = s_frame.apply(lambda x: 1 if (x.start in demand_end_points) else 2, axis = 1)
+        self.solution = gpd.GeoDataFrame(s_frame, geometry = 'geom', 
+                                         crs = 'epsg:3857')
 
     def load_intermediate(self):
-        with open(f'{self.where}/output/demand_nodes.pickle', 'rb') as handle:
+        folder_out = os.path.join(BASE_PATH, '..', 'results', 'final')
+        if not os.path.exists(folder_out):
+
+            os.mkdir(folder_out)
+
+        with open(f'{folder_out}/demand_nodes.pickle', 'rb') as handle:
             self.demand_nodes = pickle.load(handle)
 
-        with open(f'{self.where}/output/look_up.pickle', 'rb') as handle:
+        with open(f'{folder_out}/look_up.pickle', 'rb') as handle:
             self.look_up = pickle.load(handle)
             self.flip_look_up = {v: k for k, v in self.look_up.items()}
  
-        with open(f'{self.where}/output/edges.pickle', 'rb') as handle:
+        with open(f'{folder_out}/edges.pickle', 'rb') as handle:
             self.edges = pickle.load(handle)
 
-        with open(f'{self.where}/output/edge_to_geom.pickle', 'rb') as handle:
+        with open(f'{folder_out}/edge_to_geom.pickle', 'rb') as handle:
             self.edge_to_geom = pickle.load(handle)
 
-        with open(f'{self.where}/output/convert_ids.pickle', 'rb') as handle:
+        with open(f'{folder_out}/convert_ids.pickle', 'rb') as handle:
             self.convert_ids = pickle.load(handle)
             self.index = max(self.convert_ids.values()) + 1
 
     def store_intermediate(self):
-        with open(f'{self.where}/output/demand_nodes.pickle', 'wb') as handle:
+        folder_out = os.path.join(BASE_PATH, '..', 'results', 'final')
+        if not os.path.exists(folder_out):
+
+            os.mkdir(folder_out)
+
+        with open(f'{folder_out}/demand_nodes.pickle', 'wb') as handle:
             pickle.dump(self.demand_nodes, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(f'{self.where}/output/look_up.pickle', 'wb') as handle:
+        with open(f'{folder_out}/look_up.pickle', 'wb') as handle:
             pickle.dump(self.look_up, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(f'{self.where}/output/edges.pickle', 'wb') as handle:
+        with open(f'{folder_out}/edges.pickle', 'wb') as handle:
             pickle.dump(self.edges, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(f'{self.where}/output/edge_to_geom.pickle', 'wb') as handle:
+        with open(f'{folder_out}/edge_to_geom.pickle', 'wb') as handle:
             pickle.dump(self.edge_to_geom, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(f'{self.where}/output/convert_ids.pickle', 'wb') as handle:
+        with open(f'{folder_out}/convert_ids.pickle', 'wb') as handle:
             pickle.dump(self.convert_ids, handle, protocol=pickle.HIGHEST_PROTOCOL)
