@@ -22,7 +22,7 @@ setuptools.setup(
     install_requires=[
         "attrs==19.3.0",
         "beautifulsoup4==4.9.1",
-        "certifi==2020.4.5.1",
+        "certifi==2022.12.7",
         "cffi==1.14.0",
         "chardet==3.0.4",
         "click==7.1.2",
