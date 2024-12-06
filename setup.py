@@ -28,7 +28,7 @@ setuptools.setup(
         "click==7.1.2",
         "click-plugins==1.1.1",
         "cligj==0.5.0",
-        "cryptography==2.9.2",
+        "cryptography==3.3.2",
         "h3==3.7.1",
         "geopandas==0.9.0",
         "idna==2.9",
